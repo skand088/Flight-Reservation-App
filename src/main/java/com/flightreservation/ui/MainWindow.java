@@ -96,7 +96,8 @@ public class MainWindow extends JFrame {
     }
 
     private void addSampleData() {
-        // Sample flight data for demonstration
+        // Sample flight data for demonstration purposes
+        // In production, this data would be loaded from the database
         Object[][] sampleData = {
             {"FL001", "New York", "Los Angeles", "2024-01-15 08:00", "2024-01-15 11:30", 150, "$299.99"},
             {"FL002", "Chicago", "Miami", "2024-01-15 10:00", "2024-01-15 14:00", 120, "$249.99"},
