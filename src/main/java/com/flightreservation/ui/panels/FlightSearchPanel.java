@@ -1,21 +1,45 @@
 package com.flightreservation.ui.panels;
 
-import com.flightreservation.controller.FlightSearchController;
-import com.flightreservation.model.Flight;
-
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.text.AbstractDocument;
-import javax.swing.text.AttributeSet;
-import javax.swing.text.BadLocationException;
-import javax.swing.text.DocumentFilter;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.Frame;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
+
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.JTextField;
+import javax.swing.ListSelectionModel;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.text.AbstractDocument;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.DocumentFilter;
+
+import com.flightreservation.controller.FlightSearchController;
+import com.flightreservation.dao.CustomerDAO;
+import com.flightreservation.model.Customer;
+import com.flightreservation.model.Flight;
+import com.flightreservation.model.User;
+import com.flightreservation.ui.dialogs.BookingDialog;
+import com.flightreservation.util.SessionManager;
 
 /**
  * Panel for searching flights with robust validation
@@ -459,26 +483,38 @@ public class FlightSearchPanel extends JPanel {
 
         Flight selectedFlight = currentFlights.get(selectedRow);
 
-        StringBuilder message = new StringBuilder();
-        message.append("Selected Flight Details:\n\n");
-        message.append("Flight: ").append(selectedFlight.getFlightNumber()).append("\n");
-        if (selectedFlight.getAirline() != null) {
-            message.append("Airline: ").append(selectedFlight.getAirline().getAirlineName()).append("\n");
-        }
-        if (selectedFlight.getRoute() != null) {
-            message.append("Route: ").append(selectedFlight.getRoute().getOriginAirport())
-                    .append(" → ").append(selectedFlight.getRoute().getDestinationAirport()).append("\n");
-        }
-        message.append("Price: $").append(String.format("%.2f", selectedFlight.getBasePrice())).append("\n");
-        message.append("Available Seats: ").append(selectedFlight.getAvailableSeats()).append("\n\n");
-        message.append("Booking functionality coming soon!");
+        // Check if user is logged in
+        SessionManager sessionManager = SessionManager.getInstance();
+        User currentUser = sessionManager.getCurrentUser();
 
-        JOptionPane.showMessageDialog(this,
-                message.toString(),
-                "Flight Selected",
-                JOptionPane.INFORMATION_MESSAGE);
+        if (currentUser == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Please log in to book a flight.",
+                    "Login Required",
+                    JOptionPane.WARNING_MESSAGE);
+            return;
+        }
 
-        if (listener != null) {
+        // Get customer ID
+        CustomerDAO customerDAO = new CustomerDAO();
+        Customer customer = customerDAO.getCustomerByUserId(currentUser.getUserId());
+
+        if (customer == null) {
+            JOptionPane.showMessageDialog(this,
+                    "Customer profile not found. Please contact support.",
+                    "Error",
+                    JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Show new booking dialog
+        BookingDialog bookingDialog = new BookingDialog(
+                (Frame) SwingUtilities.getWindowAncestor(this),
+                selectedFlight,
+                customer);
+        bookingDialog.setVisible(true);
+
+        if (listener != null && bookingDialog.isBookingConfirmed()) {
             listener.onFlightSelected(selectedFlight);
         }
     }

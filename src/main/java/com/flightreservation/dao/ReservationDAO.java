@@ -32,7 +32,7 @@ public class ReservationDAO {
             }
 
             // Insert reservation
-            String sql = "INSERT INTO reservations (confirmation_number, reservation_date, reservation_status, " +
+            String sql = "INSERT INTO reservations (confirmation_number, reservation_date, status, " +
                     "total_fare, customer_id, flight_id) VALUES (?, ?, ?, ?, ?, ?)";
 
             PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
@@ -175,7 +175,7 @@ public class ReservationDAO {
      * Update reservation status
      */
     public boolean updateReservationStatus(int reservationId, Reservation.ReservationStatus status) {
-        String sql = "UPDATE reservations SET reservation_status = ? WHERE reservation_id = ?";
+        String sql = "UPDATE reservations SET status = ? WHERE reservation_id = ?";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -290,7 +290,7 @@ public class ReservationDAO {
             reservation.setReservationDate(reservationDate.toLocalDateTime());
         }
 
-        reservation.setStatus(Reservation.ReservationStatus.valueOf(rs.getString("reservation_status")));
+        reservation.setStatus(Reservation.ReservationStatus.valueOf(rs.getString("status")));
         reservation.setTotalFare(rs.getDouble("total_fare"));
         reservation.setCustomerId(rs.getInt("customer_id"));
         reservation.setFlightId(rs.getInt("flight_id"));

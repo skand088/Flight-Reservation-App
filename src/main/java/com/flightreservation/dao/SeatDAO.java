@@ -43,20 +43,26 @@ public class SeatDAO {
      */
     public List<Seat> getAvailableSeats(int flightId) {
         List<Seat> seats = new ArrayList<>();
-        String sql = "SELECT * FROM seats WHERE flight_id = ? AND seat_status = 'AVAILABLE' ORDER BY seat_number";
+        String sql = "SELECT * FROM seats WHERE flight_id = ? AND status = 'AVAILABLE'";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
 
             stmt.setInt(1, flightId);
+            logger.info("Executing query: {} with flight_id={}", sql, flightId);
             ResultSet rs = stmt.executeQuery();
 
+            int rowCount = 0;
             while (rs.next()) {
-                seats.add(mapResultSetToSeat(rs));
+                rowCount++;
+                Seat seat = mapResultSetToSeat(rs);
+                logger.info("Found seat: {} - {} - {} - {}",
+                        seat.getSeatNumber(), seat.getSeatClass(), seat.getStatus(), seat.getPrice());
+                seats.add(seat);
             }
-            logger.info("Retrieved {} available seats for flight {}", seats.size(), flightId);
+            logger.info("Query returned {} rows, mapped to {} seats for flight {}", rowCount, seats.size(), flightId);
         } catch (SQLException e) {
-            logger.error("Error retrieving available seats", e);
+            logger.error("Error retrieving available seats for flight {}: {}", flightId, e.getMessage(), e);
         }
         return seats;
     }
@@ -100,7 +106,7 @@ public class SeatDAO {
      * Update seat status
      */
     public boolean updateSeatStatus(int seatId, Seat.SeatStatus status) {
-        String sql = "UPDATE seats SET seat_status = ? WHERE seat_id = ?";
+        String sql = "UPDATE seats SET status = ? WHERE seat_id = ?";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -123,7 +129,7 @@ public class SeatDAO {
      * Create new seat
      */
     public boolean createSeat(Seat seat) {
-        String sql = "INSERT INTO seats (seat_number, seat_class, seat_type, price, seat_status, flight_id) " +
+        String sql = "INSERT INTO seats (seat_number, seat_class, seat_type, price, status, flight_id) " +
                 "VALUES (?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
@@ -161,7 +167,7 @@ public class SeatDAO {
         seat.setSeatClass(Seat.SeatClass.valueOf(rs.getString("seat_class")));
         seat.setSeatType(Seat.SeatType.valueOf(rs.getString("seat_type")));
         seat.setPrice(rs.getDouble("price"));
-        seat.setStatus(Seat.SeatStatus.valueOf(rs.getString("seat_status")));
+        seat.setStatus(Seat.SeatStatus.valueOf(rs.getString("status")));
         seat.setFlightId(rs.getInt("flight_id"));
         return seat;
     }

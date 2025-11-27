@@ -132,7 +132,7 @@ CREATE TABLE IF NOT EXISTS seats (
     flight_id INT NOT NULL,
     FOREIGN KEY (flight_id) REFERENCES flights(flight_id) ON DELETE CASCADE,
     INDEX idx_flight_seat (flight_id, seat_number),
-    INDEX idx_status (status),
+    INDEX idx_seat_status (status),
     UNIQUE KEY unique_seat_per_flight (flight_id, seat_number)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
@@ -411,7 +411,7 @@ ON DUPLICATE KEY UPDATE passenger_id=passenger_id;
 -- ============================================================================
 
 -- Generate seats for Flight 1 (AA101 - Boeing 737-800, 189 seats)
-INSERT INTO seats (seat_number, seat_class, seat_type, price, status, flight_id) VALUES
+INSERT INTO seats (seat_number, seat_class, seat_type, price, seat_status, flight_id) VALUES
 ('1A', 'BUSINESS', 'WINDOW', 899.99, 'AVAILABLE', 1),
 ('1B', 'BUSINESS', 'MIDDLE', 899.99, 'AVAILABLE', 1),
 ('1C', 'BUSINESS', 'AISLE', 899.99, 'AVAILABLE', 1),
