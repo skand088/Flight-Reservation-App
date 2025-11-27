@@ -226,19 +226,84 @@ public class AgentDashboard extends JFrame {
     }
 
     private void showMakeReservation() {
-        switchContent("Make Reservation Feature - Coming Soon");
+        contentPanel.removeAll();
+        com.flightreservation.ui.panels.AgentReservationPanel panel = new com.flightreservation.ui.panels.AgentReservationPanel();
+        contentPanel.add(panel, BorderLayout.CENTER);
+        contentPanel.add(createNavigationPanel(), BorderLayout.SOUTH);
+        contentPanel.revalidate();
+        contentPanel.repaint();
     }
 
     private void showModifyReservation() {
-        switchContent("Modify Reservation Feature - Coming Soon");
+        contentPanel.removeAll();
+        com.flightreservation.ui.panels.ModifyReservationPanel panel = new com.flightreservation.ui.panels.ModifyReservationPanel();
+        contentPanel.add(panel, BorderLayout.CENTER);
+        contentPanel.add(createNavigationPanel(), BorderLayout.SOUTH);
+        contentPanel.revalidate();
+        contentPanel.repaint();
     }
 
     private void showCancelReservation() {
-        switchContent("Cancel Reservation Feature - Coming Soon");
+        String confirmationNumber = JOptionPane.showInputDialog(this,
+                "Enter Confirmation Number:",
+                "Cancel Reservation",
+                JOptionPane.QUESTION_MESSAGE);
+
+        if (confirmationNumber != null && !confirmationNumber.trim().isEmpty()) {
+            com.flightreservation.dao.ReservationDAO reservationDAO = new com.flightreservation.dao.ReservationDAO();
+            com.flightreservation.model.Reservation reservation = 
+                    reservationDAO.getReservationByConfirmation(confirmationNumber.trim());
+
+            if (reservation == null) {
+                JOptionPane.showMessageDialog(this,
+                        "No reservation found with confirmation number: " + confirmationNumber,
+                        "Not Found",
+                        JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            if ("CANCELLED".equals(reservation.getStatus().toString()) || 
+                "COMPLETED".equals(reservation.getStatus().toString())) {
+                JOptionPane.showMessageDialog(this,
+                        "Cannot cancel a reservation with status: " + reservation.getStatus(),
+                        "Invalid Status",
+                        JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            int confirm = JOptionPane.showConfirmDialog(this,
+                    "Cancel reservation for:\n" +
+                            "Confirmation: " + reservation.getConfirmationNumber() + "\n" +
+                            "Flight: " + (reservation.getFlight() != null ? reservation.getFlight().getFlightNumber() : "N/A") + "\n" +
+                            "Customer ID: " + reservation.getCustomerId(),
+                    "Confirm Cancellation",
+                    JOptionPane.YES_NO_OPTION,
+                    JOptionPane.WARNING_MESSAGE);
+
+            if (confirm == JOptionPane.YES_OPTION) {
+                boolean success = reservationDAO.cancelReservation(reservation.getReservationId());
+                if (success) {
+                    JOptionPane.showMessageDialog(this,
+                            "Reservation cancelled successfully.",
+                            "Success",
+                            JOptionPane.INFORMATION_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(this,
+                            "Failed to cancel reservation.",
+                            "Error",
+                            JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        }
     }
 
     private void showAllReservations() {
-        switchContent("View All Reservations Feature - Coming Soon");
+        contentPanel.removeAll();
+        com.flightreservation.ui.panels.AllReservationsPanel panel = new com.flightreservation.ui.panels.AllReservationsPanel();
+        contentPanel.add(panel, BorderLayout.CENTER);
+        contentPanel.add(createNavigationPanel(), BorderLayout.SOUTH);
+        contentPanel.revalidate();
+        contentPanel.repaint();
     }
 
     private void showSearchFlights() {
@@ -251,7 +316,12 @@ public class AgentDashboard extends JFrame {
     }
 
     private void showFlightSchedule() {
-        switchContent("Flight Schedule Feature - Coming Soon");
+        contentPanel.removeAll();
+        com.flightreservation.ui.panels.FlightSchedulePanel panel = new com.flightreservation.ui.panels.FlightSchedulePanel();
+        contentPanel.add(panel, BorderLayout.CENTER);
+        contentPanel.add(createNavigationPanel(), BorderLayout.SOUTH);
+        contentPanel.revalidate();
+        contentPanel.repaint();
     }
 
     private void switchContent(String message) {

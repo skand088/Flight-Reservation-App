@@ -195,6 +195,72 @@ public class ReservationDAO {
     }
 
     /**
+     * Get all reservations
+     */
+    public List<Reservation> getAllReservations() {
+        List<Reservation> reservations = new ArrayList<>();
+        String sql = "SELECT * FROM reservations ORDER BY reservation_date DESC";
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql);
+                ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                Reservation reservation = mapResultSetToReservation(rs);
+                loadReservationPassengers(reservation);
+                
+                // Load flight details
+                FlightDAO flightDAO = new FlightDAO();
+                reservation.setFlight(flightDAO.getFlightById(reservation.getFlightId()));
+                
+                // Load customer details
+                CustomerDAO customerDAO = new CustomerDAO();
+                reservation.setCustomer(customerDAO.getCustomerById(reservation.getCustomerId()));
+                
+                reservations.add(reservation);
+            }
+            logger.info("Retrieved {} total reservations", reservations.size());
+        } catch (SQLException e) {
+            logger.error("Error retrieving all reservations", e);
+        }
+        return reservations;
+    }
+
+    /**
+     * Get reservations by status
+     */
+    public List<Reservation> getReservationsByStatus(Reservation.ReservationStatus status) {
+        List<Reservation> reservations = new ArrayList<>();
+        String sql = "SELECT * FROM reservations WHERE status = ? ORDER BY reservation_date DESC";
+
+        try (Connection conn = DatabaseManager.getInstance().getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, status.name());
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                Reservation reservation = mapResultSetToReservation(rs);
+                loadReservationPassengers(reservation);
+                
+                // Load flight details
+                FlightDAO flightDAO = new FlightDAO();
+                reservation.setFlight(flightDAO.getFlightById(reservation.getFlightId()));
+                
+                // Load customer details
+                CustomerDAO customerDAO = new CustomerDAO();
+                reservation.setCustomer(customerDAO.getCustomerById(reservation.getCustomerId()));
+                
+                reservations.add(reservation);
+            }
+            logger.info("Retrieved {} reservations with status {}", reservations.size(), status);
+        } catch (SQLException e) {
+            logger.error("Error retrieving reservations by status", e);
+        }
+        return reservations;
+    }
+
+    /**
      * Cancel reservation
      */
     public boolean cancelReservation(int reservationId) {

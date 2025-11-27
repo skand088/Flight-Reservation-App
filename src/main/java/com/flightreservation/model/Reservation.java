@@ -18,6 +18,7 @@ public class Reservation {
 
     // Associated objects
     private Flight flight;
+    private Customer customer;
     private List<Passenger> passengers;
 
     public enum ReservationStatus {
@@ -102,6 +103,14 @@ public class Reservation {
 
     public void setFlight(Flight flight) {
         this.flight = flight;
+    }
+
+    public Customer getCustomer() {
+        return customer;
+    }
+
+    public void setCustomer(Customer customer) {
+        this.customer = customer;
     }
 
     public List<Passenger> getPassengers() {
