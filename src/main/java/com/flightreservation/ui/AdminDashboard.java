@@ -1,14 +1,34 @@
 package com.flightreservation.ui;
 
-import com.flightreservation.model.User;
-import com.flightreservation.ui.panels.FlightManagementPanel;
-import com.flightreservation.util.SessionManager;
-import com.flightreservation.dao.UserDAO;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JTextArea;
+import javax.swing.SwingConstants;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.swing.*;
-import java.awt.*;
+import com.flightreservation.dao.UserDAO;
+import com.flightreservation.model.User;
+import com.flightreservation.ui.panels.FlightManagementPanel;
+import com.flightreservation.util.SessionManager;
 
 /**
  * Admin Dashboard - Manage flights, routes, aircraft, schedules
@@ -258,36 +278,54 @@ public class AdminDashboard extends JFrame {
 
     // Route Management Methods
     private void showAddRoute() {
-        switchContent("Add Route Feature - Coming Soon");
+        showRouteManagement();
     }
 
     private void showUpdateRoute() {
-        switchContent("Update Route Feature - Coming Soon");
+        showRouteManagement();
     }
 
     private void showRemoveRoute() {
-        switchContent("Remove Route Feature - Coming Soon");
+        showRouteManagement();
     }
 
     private void showAllRoutes() {
-        switchContent("View All Routes Feature - Coming Soon");
+        showRouteManagement();
+    }
+
+    private void showRouteManagement() {
+        contentPanel.removeAll();
+        com.flightreservation.ui.panels.RouteManagementPanel panel = new com.flightreservation.ui.panels.RouteManagementPanel();
+        contentPanel.add(panel, BorderLayout.CENTER);
+        contentPanel.add(createNavigationPanel(), BorderLayout.SOUTH);
+        contentPanel.revalidate();
+        contentPanel.repaint();
     }
 
     // Aircraft Management Methods
     private void showAddAircraft() {
-        switchContent("Add Aircraft Feature - Coming Soon");
+        showAircraftManagement();
     }
 
     private void showUpdateAircraft() {
-        switchContent("Update Aircraft Feature - Coming Soon");
+        showAircraftManagement();
     }
 
     private void showRemoveAircraft() {
-        switchContent("Remove Aircraft Feature - Coming Soon");
+        showAircraftManagement();
     }
 
     private void showAllAircraft() {
-        switchContent("View All Aircraft Feature - Coming Soon");
+        showAircraftManagement();
+    }
+
+    private void showAircraftManagement() {
+        contentPanel.removeAll();
+        com.flightreservation.ui.panels.AircraftManagementPanel panel = new com.flightreservation.ui.panels.AircraftManagementPanel();
+        contentPanel.add(panel, BorderLayout.CENTER);
+        contentPanel.add(createNavigationPanel(), BorderLayout.SOUTH);
+        contentPanel.revalidate();
+        contentPanel.repaint();
     }
 
     // Airlines Management Methods

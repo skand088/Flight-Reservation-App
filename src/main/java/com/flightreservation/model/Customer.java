@@ -6,9 +6,10 @@ package com.flightreservation.model;
 public class Customer {
     private int customerId;
     private int userId;
-    private String phoneNumber;
+    private String frequentFlyerNumber;
+    private int loyaltyPoints;
+    private String preferredAirline;
     private String address;
-    private String preferredPaymentMethod;
 
     // Associated user object
     private User user;
@@ -17,9 +18,8 @@ public class Customer {
     public Customer() {
     }
 
-    public Customer(int userId, String phoneNumber, String address) {
+    public Customer(int userId, String address) {
         this.userId = userId;
-        this.phoneNumber = phoneNumber;
         this.address = address;
     }
 
@@ -40,12 +40,28 @@ public class Customer {
         this.userId = userId;
     }
 
-    public String getPhoneNumber() {
-        return phoneNumber;
+    public String getFrequentFlyerNumber() {
+        return frequentFlyerNumber;
     }
 
-    public void setPhoneNumber(String phoneNumber) {
-        this.phoneNumber = phoneNumber;
+    public void setFrequentFlyerNumber(String frequentFlyerNumber) {
+        this.frequentFlyerNumber = frequentFlyerNumber;
+    }
+
+    public int getLoyaltyPoints() {
+        return loyaltyPoints;
+    }
+
+    public void setLoyaltyPoints(int loyaltyPoints) {
+        this.loyaltyPoints = loyaltyPoints;
+    }
+
+    public String getPreferredAirline() {
+        return preferredAirline;
+    }
+
+    public void setPreferredAirline(String preferredAirline) {
+        this.preferredAirline = preferredAirline;
     }
 
     public String getAddress() {
@@ -54,14 +70,6 @@ public class Customer {
 
     public void setAddress(String address) {
         this.address = address;
-    }
-
-    public String getPreferredPaymentMethod() {
-        return preferredPaymentMethod;
-    }
-
-    public void setPreferredPaymentMethod(String preferredPaymentMethod) {
-        this.preferredPaymentMethod = preferredPaymentMethod;
     }
 
     public User getUser() {

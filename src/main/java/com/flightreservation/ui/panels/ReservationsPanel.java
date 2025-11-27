@@ -1,14 +1,25 @@
 package com.flightreservation.ui.panels;
 
-import com.flightreservation.controller.ReservationController;
-import com.flightreservation.model.Reservation;
-import com.flightreservation.util.SessionManager;
-
-import javax.swing.*;
-import javax.swing.table.DefaultTableModel;
-import java.awt.*;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.FlowLayout;
+import java.awt.Font;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.ListSelectionModel;
+import javax.swing.SwingWorker;
+import javax.swing.table.DefaultTableModel;
+
+import com.flightreservation.controller.ReservationController;
+import com.flightreservation.model.Reservation;
 
 /**
  * Panel for viewing and managing reservations

@@ -1,13 +1,33 @@
 package com.flightreservation.ui;
 
-import com.flightreservation.model.User;
-import com.flightreservation.util.SessionManager;
-import com.flightreservation.dao.UserDAO;
+import java.awt.BorderLayout;
+import java.awt.Color;
+import java.awt.Cursor;
+import java.awt.Dimension;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.Insets;
+
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JMenu;
+import javax.swing.JMenuBar;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JTextArea;
+import javax.swing.SwingConstants;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.swing.*;
-import java.awt.*;
+import com.flightreservation.dao.UserDAO;
+import com.flightreservation.model.User;
+import com.flightreservation.util.SessionManager;
 
 /**
  * Agent Dashboard - Assist customers, manage profiles, modify reservations
@@ -185,15 +205,24 @@ public class AgentDashboard extends JFrame {
     }
 
     private void showSearchCustomer() {
-        switchContent("Search Customer Feature - Coming Soon");
+        showCustomerManagement();
     }
 
     private void showAddCustomer() {
-        switchContent("Add Customer Feature - Coming Soon");
+        showCustomerManagement();
     }
 
     private void showEditCustomer() {
-        switchContent("Edit Customer Feature - Coming Soon");
+        showCustomerManagement();
+    }
+
+    private void showCustomerManagement() {
+        contentPanel.removeAll();
+        com.flightreservation.ui.panels.CustomerManagementPanel panel = new com.flightreservation.ui.panels.CustomerManagementPanel();
+        contentPanel.add(panel, BorderLayout.CENTER);
+        contentPanel.add(createNavigationPanel(), BorderLayout.SOUTH);
+        contentPanel.revalidate();
+        contentPanel.repaint();
     }
 
     private void showMakeReservation() {
@@ -213,7 +242,12 @@ public class AgentDashboard extends JFrame {
     }
 
     private void showSearchFlights() {
-        switchContent("Search Flights Feature - Coming Soon");
+        contentPanel.removeAll();
+        com.flightreservation.ui.panels.FlightSearchPanel panel = new com.flightreservation.ui.panels.FlightSearchPanel();
+        contentPanel.add(panel, BorderLayout.CENTER);
+        contentPanel.add(createNavigationPanel(), BorderLayout.SOUTH);
+        contentPanel.revalidate();
+        contentPanel.repaint();
     }
 
     private void showFlightSchedule() {

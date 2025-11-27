@@ -1,13 +1,18 @@
 package com.flightreservation.dao;
 
-import com.flightreservation.database.DatabaseManager;
-import com.flightreservation.model.Customer;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.*;
-import java.util.ArrayList;
-import java.util.List;
+import com.flightreservation.database.DatabaseManager;
+import com.flightreservation.model.Customer;
 
 /**
  * DAO for Customer operations
@@ -19,7 +24,10 @@ public class CustomerDAO {
      * Get customer by user ID
      */
     public Customer getCustomerByUserId(int userId) {
-        String sql = "SELECT * FROM customers WHERE user_id = ?";
+        String sql = "SELECT c.customer_id, c.frequent_flyer_number, c.loyalty_points, c.preferred_airline, c.address, "
+                +
+                "u.username, u.email, u.phone_number, u.role, u.account_status " +
+                "FROM customers c JOIN users u ON c.customer_id = u.user_id WHERE c.customer_id = ?";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -40,7 +48,10 @@ public class CustomerDAO {
      * Get customer by ID
      */
     public Customer getCustomerById(int customerId) {
-        String sql = "SELECT * FROM customers WHERE customer_id = ?";
+        String sql = "SELECT c.customer_id, c.frequent_flyer_number, c.loyalty_points, c.preferred_airline, c.address, "
+                +
+                "u.username, u.email, u.phone_number, u.role, u.account_status " +
+                "FROM customers c JOIN users u ON c.customer_id = u.user_id WHERE c.customer_id = ?";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -62,8 +73,10 @@ public class CustomerDAO {
      */
     public List<Customer> getAllCustomers() {
         List<Customer> customers = new ArrayList<>();
-        String sql = "SELECT c.*, u.username, u.email FROM customers c " +
-                "JOIN users u ON c.user_id = u.user_id";
+        String sql = "SELECT c.customer_id, c.frequent_flyer_number, c.loyalty_points, c.preferred_airline, c.address, "
+                +
+                "u.username, u.email, u.phone_number, u.role, u.account_status " +
+                "FROM customers c JOIN users u ON c.customer_id = u.user_id";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
                 Statement stmt = conn.createStatement();
@@ -84,9 +97,11 @@ public class CustomerDAO {
      */
     public List<Customer> searchCustomers(String keyword) {
         List<Customer> customers = new ArrayList<>();
-        String sql = "SELECT c.*, u.username, u.email FROM customers c " +
-                "JOIN users u ON c.user_id = u.user_id " +
-                "WHERE u.username LIKE ? OR u.email LIKE ? OR c.phone_number LIKE ?";
+        String sql = "SELECT c.customer_id, c.frequent_flyer_number, c.loyalty_points, c.preferred_airline, c.address, "
+                +
+                "u.username, u.email, u.phone_number, u.role, u.account_status " +
+                "FROM customers c JOIN users u ON c.customer_id = u.user_id " +
+                "WHERE u.username LIKE ? OR u.email LIKE ? OR u.phone_number LIKE ?";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -112,23 +127,22 @@ public class CustomerDAO {
      * Create new customer
      */
     public boolean createCustomer(Customer customer) {
-        String sql = "INSERT INTO customers (user_id, phone_number, address, preferred_payment_method) " +
-                "VALUES (?, ?, ?, ?)";
+        String sql = "INSERT INTO customers (customer_id, frequent_flyer_number, loyalty_points, preferred_airline, address) "
+                +
+                "VALUES (?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
-                PreparedStatement stmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setInt(1, customer.getUserId());
-            stmt.setString(2, customer.getPhoneNumber());
-            stmt.setString(3, customer.getAddress());
-            stmt.setString(4, customer.getPreferredPaymentMethod());
+            stmt.setInt(1, customer.getUserId()); // customer_id is the user_id
+            stmt.setString(2, customer.getFrequentFlyerNumber());
+            stmt.setInt(3, customer.getLoyaltyPoints());
+            stmt.setString(4, customer.getPreferredAirline());
+            stmt.setString(5, customer.getAddress());
 
             int affectedRows = stmt.executeUpdate();
             if (affectedRows > 0) {
-                ResultSet generatedKeys = stmt.getGeneratedKeys();
-                if (generatedKeys.next()) {
-                    customer.setCustomerId(generatedKeys.getInt(1));
-                }
+                customer.setCustomerId(customer.getUserId());
                 logger.info("Created customer for user ID: {}", customer.getUserId());
                 return true;
             }
@@ -142,16 +156,18 @@ public class CustomerDAO {
      * Update customer
      */
     public boolean updateCustomer(Customer customer) {
-        String sql = "UPDATE customers SET phone_number = ?, address = ?, preferred_payment_method = ? " +
+        String sql = "UPDATE customers SET frequent_flyer_number = ?, loyalty_points = ?, preferred_airline = ?, address = ? "
+                +
                 "WHERE customer_id = ?";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setString(1, customer.getPhoneNumber());
-            stmt.setString(2, customer.getAddress());
-            stmt.setString(3, customer.getPreferredPaymentMethod());
-            stmt.setInt(4, customer.getCustomerId());
+            stmt.setString(1, customer.getFrequentFlyerNumber());
+            stmt.setInt(2, customer.getLoyaltyPoints());
+            stmt.setString(3, customer.getPreferredAirline());
+            stmt.setString(4, customer.getAddress());
+            stmt.setInt(5, customer.getCustomerId());
 
             int affectedRows = stmt.executeUpdate();
             if (affectedRows > 0) {
@@ -191,10 +207,38 @@ public class CustomerDAO {
     private Customer mapResultSetToCustomer(ResultSet rs) throws SQLException {
         Customer customer = new Customer();
         customer.setCustomerId(rs.getInt("customer_id"));
-        customer.setUserId(rs.getInt("user_id"));
-        customer.setPhoneNumber(rs.getString("phone_number"));
+
+        // In the schema, customer_id is the same as user_id (FK relationship)
+        customer.setUserId(rs.getInt("customer_id"));
+
+        // Map schema fields to Customer model
         customer.setAddress(rs.getString("address"));
-        customer.setPreferredPaymentMethod(rs.getString("preferred_payment_method"));
+        customer.setFrequentFlyerNumber(rs.getString("frequent_flyer_number"));
+        customer.setLoyaltyPoints(rs.getInt("loyalty_points"));
+        customer.setPreferredAirline(rs.getString("preferred_airline"));
+
+        // Populate User object if columns are available
+        try {
+            com.flightreservation.model.User user = new com.flightreservation.model.User();
+            user.setUserId(rs.getInt("customer_id")); // customer_id is the user_id
+            user.setUsername(rs.getString("username"));
+            user.setEmail(rs.getString("email"));
+            user.setPhoneNumber(rs.getString("phone_number"));
+
+            // Try to get additional user fields if available
+            try {
+                user.setRole(com.flightreservation.model.User.UserRole.valueOf(rs.getString("role")));
+                user.setAccountStatus(
+                        com.flightreservation.model.User.AccountStatus.valueOf(rs.getString("account_status")));
+            } catch (SQLException e) {
+                // These columns might not be in the SELECT, that's okay
+            }
+
+            customer.setUser(user);
+        } catch (SQLException e) {
+            // User columns might not be in the SELECT, that's okay
+        }
+
         return customer;
     }
 }
