@@ -1,31 +1,41 @@
 package com.flightreservation.controller;
 
-import com.flightreservation.dao.*;
-import com.flightreservation.model.*;
+import java.util.List;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.time.LocalDateTime;
-import java.util.List;
+import com.flightreservation.dao.AircraftDAO;
+import com.flightreservation.dao.AirlineDAO;
+import com.flightreservation.dao.FlightDAO;
+import com.flightreservation.dao.ReservationDAO;
+import com.flightreservation.dao.RouteDAO;
+import com.flightreservation.dao.SeatDAO;
+import com.flightreservation.model.entities.Aircraft;
+import com.flightreservation.model.entities.Airline;
+import com.flightreservation.model.entities.Flight;
+import com.flightreservation.model.entities.Reservation;
+import com.flightreservation.model.entities.Route;
+import com.flightreservation.model.entities.Seat;
 
-/**
- * Controller for admin operations
- */
 public class AdminController {
     private static final Logger logger = LoggerFactory.getLogger(AdminController.class);
     private final FlightDAO flightDAO;
     private final RouteDAO routeDAO;
     private final AircraftDAO aircraftDAO;
     private final SeatDAO seatDAO;
+    private final ReservationDAO reservationDAO;
+    private final AirlineDAO airlineDAO;
 
     public AdminController() {
         this.flightDAO = new FlightDAO();
         this.routeDAO = new RouteDAO();
         this.aircraftDAO = new AircraftDAO();
         this.seatDAO = new SeatDAO();
+        this.reservationDAO = new ReservationDAO();
+        this.airlineDAO = new AirlineDAO();
     }
 
-    // Flight Management
     public List<Flight> getAllFlights() {
         return flightDAO.getAllFlights();
     }
@@ -33,17 +43,13 @@ public class AdminController {
     public boolean createFlight(Flight flight) {
         logger.info("Creating new flight: {}", flight.getFlightNumber());
 
-        // Validate flight data
         validateFlight(flight);
 
-        // Check for schedule conflicts
         if (hasScheduleConflict(flight)) {
             throw new IllegalStateException("Aircraft is already scheduled for this time period");
         }
 
-        // Create flight
         if (flightDAO.createFlight(flight)) {
-            // Generate seats for the flight
             generateSeatsForFlight(flight);
             logger.info("Flight created successfully");
             return true;
@@ -60,13 +66,22 @@ public class AdminController {
     public boolean deleteFlight(int flightId) {
         logger.info("Deleting flight ID: {}", flightId);
 
-        // Check if flight has reservations
-        // TODO: Add check for existing reservations
+        List<Reservation> reservations = reservationDAO.getAllReservations();
+        long activeReservations = reservations.stream()
+                .filter(r -> r.getFlightId() == flightId)
+                .filter(r -> r.getStatus() == Reservation.ReservationStatus.CONFIRMED ||
+                        r.getStatus() == Reservation.ReservationStatus.PENDING)
+                .count();
+
+        if (activeReservations > 0) {
+            logger.warn("Cannot delete flight {} - has {} active reservations", flightId, activeReservations);
+            throw new IllegalStateException(
+                    "Cannot delete flight with active reservations. Please cancel all reservations first.");
+        }
 
         return flightDAO.deleteFlight(flightId);
     }
 
-    // Route Management
     public List<Route> getAllRoutes() {
         return routeDAO.getAllRoutes();
     }
@@ -88,7 +103,6 @@ public class AdminController {
         return routeDAO.deleteRoute(routeId);
     }
 
-    // Aircraft Management
     public List<Aircraft> getAllAircraft() {
         return aircraftDAO.getAllAircraft();
     }
@@ -110,7 +124,10 @@ public class AdminController {
         return aircraftDAO.deleteAircraft(aircraftId);
     }
 
-    // Validation Methods
+    public List<Airline> getAllAirlines() {
+        return airlineDAO.getAllAirlines();
+    }
+
     private void validateFlight(Flight flight) {
         if (flight.getFlightNumber() == null || flight.getFlightNumber().trim().isEmpty()) {
             throw new IllegalArgumentException("Flight number is required");
@@ -166,8 +183,37 @@ public class AdminController {
     }
 
     private boolean hasScheduleConflict(Flight flight) {
-        // TODO: Implement schedule conflict checking
-        // Check if the same aircraft is scheduled for overlapping times
+        List<Flight> allFlights = flightDAO.getAllFlights();
+
+        for (Flight existingFlight : allFlights) {
+            if (existingFlight.getFlightId() == flight.getFlightId()) {
+                continue;
+            }
+
+            if (existingFlight.getAircraftId() != flight.getAircraftId()) {
+                continue;
+            }
+
+            if (existingFlight.getStatus() == Flight.FlightStatus.CANCELLED) {
+                continue;
+            }
+
+            boolean departureOverlaps = flight.getDepartureTime().isAfter(existingFlight.getDepartureTime()) &&
+                    flight.getDepartureTime().isBefore(existingFlight.getArrivalTime());
+
+            boolean arrivalOverlaps = flight.getArrivalTime().isAfter(existingFlight.getDepartureTime()) &&
+                    flight.getArrivalTime().isBefore(existingFlight.getArrivalTime());
+
+            boolean containsExisting = flight.getDepartureTime().isBefore(existingFlight.getDepartureTime()) &&
+                    flight.getArrivalTime().isAfter(existingFlight.getArrivalTime());
+
+            if (departureOverlaps || arrivalOverlaps || containsExisting) {
+                logger.warn("Schedule conflict detected for aircraft {} with flight {}",
+                        flight.getAircraftId(), existingFlight.getFlightNumber());
+                return true;
+            }
+        }
+
         return false;
     }
 
@@ -180,15 +226,12 @@ public class AdminController {
             return;
         }
 
-        // Generate economy seats (70% of total)
         int economySeats = (int) (aircraft.getTotalSeats() * 0.7);
         int businessSeats = (int) (aircraft.getTotalSeats() * 0.2);
         int firstClassSeats = aircraft.getTotalSeats() - economySeats - businessSeats;
 
-        int seatNumber = 1;
         String[] seatLetters = { "A", "B", "C", "D", "E", "F" };
 
-        // First class
         for (int i = 0; i < firstClassSeats; i++) {
             int row = (i / 4) + 1;
             String letter = seatLetters[i % 4];
@@ -196,7 +239,6 @@ public class AdminController {
                     determineSeatType(i % 4), flight.getBasePrice() * 3);
         }
 
-        // Business class
         int businessStart = (firstClassSeats / 4) + 1;
         for (int i = 0; i < businessSeats; i++) {
             int row = (i / 4) + businessStart;
@@ -205,7 +247,6 @@ public class AdminController {
                     determineSeatType(i % 4), flight.getBasePrice() * 2);
         }
 
-        // Economy class
         int economyStart = businessStart + (businessSeats / 4) + 1;
         for (int i = 0; i < economySeats; i++) {
             int row = (i / 6) + economyStart;
@@ -214,7 +255,6 @@ public class AdminController {
                     determineSeatType(i % 6), flight.getBasePrice());
         }
 
-        // Update available seats count
         flight.setAvailableSeats(aircraft.getTotalSeats());
         flightDAO.updateFlight(flight);
     }

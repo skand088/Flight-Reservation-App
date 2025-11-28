@@ -1,10 +1,8 @@
 package com.flightreservation.util;
 
-import com.flightreservation.model.User;
+import com.flightreservation.model.entities.User;
 
-/**
- * Singleton class to manage user session
- */
+// singleton for session
 public class SessionManager {
     private static SessionManager instance;
     private User currentUser;

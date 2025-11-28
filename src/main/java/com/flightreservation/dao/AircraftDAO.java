@@ -1,7 +1,7 @@
 package com.flightreservation.dao;
 
 import com.flightreservation.database.DatabaseManager;
-import com.flightreservation.model.Aircraft;
+import com.flightreservation.model.entities.Aircraft;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -9,15 +9,9 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * DAO for Aircraft operations
- */
 public class AircraftDAO {
     private static final Logger logger = LoggerFactory.getLogger(AircraftDAO.class);
 
-    /**
-     * Get all aircraft
-     */
     public List<Aircraft> getAllAircraft() {
         List<Aircraft> aircraftList = new ArrayList<>();
         String sql = "SELECT * FROM aircraft ORDER BY manufacturer, model";
@@ -36,9 +30,6 @@ public class AircraftDAO {
         return aircraftList;
     }
 
-    /**
-     * Get aircraft by ID
-     */
     public Aircraft getAircraftById(int aircraftId) {
         String sql = "SELECT * FROM aircraft WHERE aircraft_id = ?";
 
@@ -57,9 +48,6 @@ public class AircraftDAO {
         return null;
     }
 
-    /**
-     * Create new aircraft
-     */
     public boolean createAircraft(Aircraft aircraft) {
         String sql = "INSERT INTO aircraft (tail_number, model, manufacturer, total_seats, seat_configuration) " +
                 "VALUES (?, ?, ?, ?, ?)";
@@ -88,9 +76,6 @@ public class AircraftDAO {
         return false;
     }
 
-    /**
-     * Update aircraft
-     */
     public boolean updateAircraft(Aircraft aircraft) {
         String sql = "UPDATE aircraft SET tail_number = ?, model = ?, manufacturer = ?, " +
                 "total_seats = ?, seat_configuration = ? WHERE aircraft_id = ?";
@@ -116,9 +101,6 @@ public class AircraftDAO {
         return false;
     }
 
-    /**
-     * Delete aircraft
-     */
     public boolean deleteAircraft(int aircraftId) {
         String sql = "DELETE FROM aircraft WHERE aircraft_id = ?";
 
@@ -137,9 +119,6 @@ public class AircraftDAO {
         return false;
     }
 
-    /**
-     * Map ResultSet to Aircraft object
-     */
     private Aircraft mapResultSetToAircraft(ResultSet rs) throws SQLException {
         Aircraft aircraft = new Aircraft();
         aircraft.setAircraftId(rs.getInt("aircraft_id"));

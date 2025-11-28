@@ -1,22 +1,28 @@
 package com.flightreservation.dao;
 
-import com.flightreservation.database.DatabaseManager;
-import com.flightreservation.model.User;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Timestamp;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.*;
-import java.time.LocalDateTime;
+import com.flightreservation.database.DatabaseManager;
+import com.flightreservation.model.strategies.authentication.AuthenticationStrategy;
+import com.flightreservation.model.strategies.authentication.PasswordAuthenticationStrategy;
+import com.flightreservation.model.entities.User;
 
-/**
- * Data Access Object for User operations
- */
 public class UserDAO {
     private static final Logger logger = LoggerFactory.getLogger(UserDAO.class);
+    private final AuthenticationStrategy authStrategy;
 
-    /**
-     * Authenticate user by username and password
-     */
+    public UserDAO() {
+        this.authStrategy = new PasswordAuthenticationStrategy();
+    }
+
     public User authenticate(String username, String password) {
         String sql = "SELECT user_id, username, password_hash, email, phone_number, role, " +
                 "account_status, created_date, last_login_date " +
@@ -31,11 +37,11 @@ public class UserDAO {
             if (rs.next()) {
                 String storedPassword = rs.getString("password_hash");
 
-                // Simple password check (in production, use bcrypt/argon2)
-                if (password.equals(storedPassword)) {
+                if (authStrategy.authenticate(username, password) && password.equals(storedPassword)) {
                     User user = mapResultSetToUser(rs);
                     updateLastLogin(user.getUserId());
-                    logger.info("User authenticated successfully: {}", username);
+                    logger.info("User authenticated successfully using: {}",
+                            authStrategy.getAuthenticationMethodName());
                     return user;
                 }
             }
@@ -48,9 +54,6 @@ public class UserDAO {
         }
     }
 
-    /**
-     * Update last login timestamp
-     */
     private void updateLastLogin(int userId) {
         String sql = "UPDATE users SET last_login_date = NOW() WHERE user_id = ?";
 
@@ -65,9 +68,6 @@ public class UserDAO {
         }
     }
 
-    /**
-     * Create session record
-     */
     public String createSession(int userId, String ipAddress) {
         String sessionId = java.util.UUID.randomUUID().toString();
         String sql = "INSERT INTO sessions (session_id, user_id, ip_address) VALUES (?, ?, ?)";
@@ -89,9 +89,6 @@ public class UserDAO {
         }
     }
 
-    /**
-     * End session
-     */
     public void endSession(String sessionId) {
         String sql = "DELETE FROM sessions WHERE session_id = ?";
 
@@ -107,9 +104,6 @@ public class UserDAO {
         }
     }
 
-    /**
-     * Map ResultSet to User object
-     */
     private User mapResultSetToUser(ResultSet rs) throws SQLException {
         User user = new User();
         user.setUserId(rs.getInt("user_id"));
@@ -133,9 +127,6 @@ public class UserDAO {
         return user;
     }
 
-    /**
-     * Get user by ID
-     */
     public User getUserById(int userId) {
         String sql = "SELECT user_id, username, password_hash, email, phone_number, role, " +
                 "account_status, created_date, last_login_date FROM users WHERE user_id = ?";
@@ -157,9 +148,6 @@ public class UserDAO {
         }
     }
 
-    /**
-     * Create new user
-     */
     public boolean createUser(User user) {
         String sql = "INSERT INTO users (username, password_hash, email, phone_number, role, account_status) " +
                 "VALUES (?, ?, ?, ?, ?, ?)";
@@ -191,9 +179,6 @@ public class UserDAO {
         }
     }
 
-    /**
-     * Update user
-     */
     public boolean updateUser(User user) {
         String sql = "UPDATE users SET username = ?, email = ?, phone_number = ?, " +
                 "role = ?, account_status = ? WHERE user_id = ?";
@@ -221,9 +206,6 @@ public class UserDAO {
         }
     }
 
-    /**
-     * Delete user
-     */
     public boolean deleteUser(int userId) {
         String sql = "DELETE FROM users WHERE user_id = ?";
 

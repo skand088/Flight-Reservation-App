@@ -1,23 +1,22 @@
 package com.flightreservation.dao;
 
-import com.flightreservation.database.DatabaseManager;
-import com.flightreservation.model.Seat;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * DAO for Seat operations
- */
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.flightreservation.database.DatabaseManager;
+import com.flightreservation.model.entities.Seat;
+
 public class SeatDAO {
     private static final Logger logger = LoggerFactory.getLogger(SeatDAO.class);
 
-    /**
-     * Get all seats for a flight
-     */
     public List<Seat> getSeatsByFlightId(int flightId) {
         List<Seat> seats = new ArrayList<>();
         String sql = "SELECT * FROM seats WHERE flight_id = ? ORDER BY seat_number";
@@ -38,9 +37,6 @@ public class SeatDAO {
         return seats;
     }
 
-    /**
-     * Get available seats for a flight
-     */
     public List<Seat> getAvailableSeats(int flightId) {
         List<Seat> seats = new ArrayList<>();
         String sql = "SELECT * FROM seats WHERE flight_id = ? AND status = 'AVAILABLE'";
@@ -67,9 +63,6 @@ public class SeatDAO {
         return seats;
     }
 
-    /**
-     * Get seat by ID
-     */
     public Seat getSeatById(int seatId) {
         String sql = "SELECT * FROM seats WHERE seat_id = ?";
 
@@ -88,23 +81,14 @@ public class SeatDAO {
         return null;
     }
 
-    /**
-     * Reserve a seat
-     */
     public boolean reserveSeat(int seatId) {
         return updateSeatStatus(seatId, Seat.SeatStatus.RESERVED);
     }
 
-    /**
-     * Release a seat
-     */
     public boolean releaseSeat(int seatId) {
         return updateSeatStatus(seatId, Seat.SeatStatus.AVAILABLE);
     }
 
-    /**
-     * Update seat status
-     */
     public boolean updateSeatStatus(int seatId, Seat.SeatStatus status) {
         String sql = "UPDATE seats SET status = ? WHERE seat_id = ?";
 
@@ -125,9 +109,6 @@ public class SeatDAO {
         return false;
     }
 
-    /**
-     * Create new seat
-     */
     public boolean createSeat(Seat seat) {
         String sql = "INSERT INTO seats (seat_number, seat_class, seat_type, price, status, flight_id) " +
                 "VALUES (?, ?, ?, ?, ?, ?)";
@@ -157,9 +138,6 @@ public class SeatDAO {
         return false;
     }
 
-    /**
-     * Map ResultSet to Seat object
-     */
     private Seat mapResultSetToSeat(ResultSet rs) throws SQLException {
         Seat seat = new Seat();
         seat.setSeatId(rs.getInt("seat_id"));

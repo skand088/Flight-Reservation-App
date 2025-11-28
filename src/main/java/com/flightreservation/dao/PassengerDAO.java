@@ -1,21 +1,20 @@
 package com.flightreservation.dao;
 
-import com.flightreservation.database.DatabaseManager;
-import com.flightreservation.model.Passenger;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.sql.*;
+import com.flightreservation.database.DatabaseManager;
+import com.flightreservation.model.entities.Passenger;
 
-/**
- * DAO for Passenger operations
- */
 public class PassengerDAO {
     private static final Logger logger = LoggerFactory.getLogger(PassengerDAO.class);
 
-    /**
-     * Create new passenger
-     */
     public boolean createPassenger(Passenger passenger) {
         try (Connection conn = DatabaseManager.getInstance().getConnection()) {
             return createPassenger(passenger, conn);
@@ -25,9 +24,6 @@ public class PassengerDAO {
         }
     }
 
-    /**
-     * Create new passenger with existing connection (for transactions)
-     */
     public boolean createPassenger(Passenger passenger, Connection conn) throws SQLException {
         String sql = "INSERT INTO passengers (first_name, last_name, age, id_number, id_type, " +
                 "contact_email, contact_phone) VALUES (?, ?, ?, ?, ?, ?, ?)";
@@ -54,9 +50,6 @@ public class PassengerDAO {
         return false;
     }
 
-    /**
-     * Get passenger by ID
-     */
     public Passenger getPassengerById(int passengerId) {
         String sql = "SELECT * FROM passengers WHERE passenger_id = ?";
 
@@ -75,9 +68,6 @@ public class PassengerDAO {
         return null;
     }
 
-    /**
-     * Update passenger
-     */
     public boolean updatePassenger(Passenger passenger) {
         String sql = "UPDATE passengers SET first_name = ?, last_name = ?, age = ?, id_number = ?, " +
                 "id_type = ?, contact_email = ?, contact_phone = ? WHERE passenger_id = ?";
@@ -105,9 +95,6 @@ public class PassengerDAO {
         return false;
     }
 
-    /**
-     * Map ResultSet to Passenger object
-     */
     public Passenger mapResultSetToPassenger(ResultSet rs) throws SQLException {
         Passenger passenger = new Passenger();
         passenger.setPassengerId(rs.getInt("passenger_id"));

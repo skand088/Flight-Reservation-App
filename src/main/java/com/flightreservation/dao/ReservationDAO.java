@@ -1,37 +1,35 @@
 package com.flightreservation.dao;
 
-import com.flightreservation.database.DatabaseManager;
-import com.flightreservation.model.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.sql.*;
-import java.time.LocalDateTime;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * DAO for Reservation operations
- */
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.flightreservation.database.DatabaseManager;
+import com.flightreservation.model.entities.Passenger;
+import com.flightreservation.model.entities.Reservation;
+
 public class ReservationDAO {
     private static final Logger logger = LoggerFactory.getLogger(ReservationDAO.class);
 
-    /**
-     * Create new reservation
-     */
     public boolean createReservation(Reservation reservation) {
         Connection conn = null;
         try {
             conn = DatabaseManager.getInstance().getConnection();
             conn.setAutoCommit(false);
 
-            // Generate confirmation number if not set
             if (reservation.getConfirmationNumber() == null) {
                 reservation.setConfirmationNumber(generateConfirmationNumber());
             }
 
-            // Insert reservation
             String sql = "INSERT INTO reservations (confirmation_number, reservation_date, status, " +
                     "total_fare, customer_id, flight_id) VALUES (?, ?, ?, ?, ?, ?)";
 
@@ -50,7 +48,6 @@ public class ReservationDAO {
                     reservation.setReservationId(generatedKeys.getInt(1));
                 }
 
-                // Insert passengers if any
                 if (reservation.getPassengers() != null && !reservation.getPassengers().isEmpty()) {
                     PassengerDAO passengerDAO = new PassengerDAO();
                     for (Passenger passenger : reservation.getPassengers()) {
@@ -86,9 +83,6 @@ public class ReservationDAO {
         return false;
     }
 
-    /**
-     * Link passenger to reservation
-     */
     private void linkPassengerToReservation(int reservationId, int passengerId, int seatId, Connection conn)
             throws SQLException {
         String sql = "INSERT INTO reservation_passengers (reservation_id, passenger_id, seat_id) VALUES (?, ?, ?)";
@@ -100,9 +94,6 @@ public class ReservationDAO {
         }
     }
 
-    /**
-     * Get reservation by ID
-     */
     public Reservation getReservationById(int reservationId) {
         String sql = "SELECT * FROM reservations WHERE reservation_id = ?";
 
@@ -123,9 +114,6 @@ public class ReservationDAO {
         return null;
     }
 
-    /**
-     * Get reservation by confirmation number
-     */
     public Reservation getReservationByConfirmation(String confirmationNumber) {
         String sql = "SELECT * FROM reservations WHERE confirmation_number = ?";
 
@@ -146,9 +134,6 @@ public class ReservationDAO {
         return null;
     }
 
-    /**
-     * Get all reservations for a customer
-     */
     public List<Reservation> getReservationsByCustomerId(int customerId) {
         List<Reservation> reservations = new ArrayList<>();
         String sql = "SELECT * FROM reservations WHERE customer_id = ? ORDER BY reservation_date DESC";
@@ -171,9 +156,6 @@ public class ReservationDAO {
         return reservations;
     }
 
-    /**
-     * Update reservation status
-     */
     public boolean updateReservationStatus(int reservationId, Reservation.ReservationStatus status) {
         String sql = "UPDATE reservations SET status = ? WHERE reservation_id = ?";
 
@@ -194,9 +176,6 @@ public class ReservationDAO {
         return false;
     }
 
-    /**
-     * Get all reservations
-     */
     public List<Reservation> getAllReservations() {
         List<Reservation> reservations = new ArrayList<>();
         String sql = "SELECT * FROM reservations ORDER BY reservation_date DESC";
@@ -208,15 +187,13 @@ public class ReservationDAO {
             while (rs.next()) {
                 Reservation reservation = mapResultSetToReservation(rs);
                 loadReservationPassengers(reservation);
-                
-                // Load flight details
+
                 FlightDAO flightDAO = new FlightDAO();
                 reservation.setFlight(flightDAO.getFlightById(reservation.getFlightId()));
-                
-                // Load customer details
+
                 CustomerDAO customerDAO = new CustomerDAO();
                 reservation.setCustomer(customerDAO.getCustomerById(reservation.getCustomerId()));
-                
+
                 reservations.add(reservation);
             }
             logger.info("Retrieved {} total reservations", reservations.size());
@@ -226,9 +203,6 @@ public class ReservationDAO {
         return reservations;
     }
 
-    /**
-     * Get reservations by status
-     */
     public List<Reservation> getReservationsByStatus(Reservation.ReservationStatus status) {
         List<Reservation> reservations = new ArrayList<>();
         String sql = "SELECT * FROM reservations WHERE status = ? ORDER BY reservation_date DESC";
@@ -242,15 +216,13 @@ public class ReservationDAO {
             while (rs.next()) {
                 Reservation reservation = mapResultSetToReservation(rs);
                 loadReservationPassengers(reservation);
-                
-                // Load flight details
+
                 FlightDAO flightDAO = new FlightDAO();
                 reservation.setFlight(flightDAO.getFlightById(reservation.getFlightId()));
-                
-                // Load customer details
+
                 CustomerDAO customerDAO = new CustomerDAO();
                 reservation.setCustomer(customerDAO.getCustomerById(reservation.getCustomerId()));
-                
+
                 reservations.add(reservation);
             }
             logger.info("Retrieved {} reservations with status {}", reservations.size(), status);
@@ -260,19 +232,14 @@ public class ReservationDAO {
         return reservations;
     }
 
-    /**
-     * Cancel reservation
-     */
     public boolean cancelReservation(int reservationId) {
         Connection conn = null;
         try {
             conn = DatabaseManager.getInstance().getConnection();
             conn.setAutoCommit(false);
 
-            // Update reservation status
             updateReservationStatus(reservationId, Reservation.ReservationStatus.CANCELLED);
 
-            // Release seats
             String sql = "SELECT seat_id FROM reservation_passengers WHERE reservation_id = ?";
             PreparedStatement stmt = conn.prepareStatement(sql);
             stmt.setInt(1, reservationId);
@@ -309,9 +276,6 @@ public class ReservationDAO {
         return false;
     }
 
-    /**
-     * Load passengers for a reservation
-     */
     private void loadReservationPassengers(Reservation reservation) {
         String sql = "SELECT p.*, rp.seat_id FROM passengers p " +
                 "JOIN reservation_passengers rp ON p.passenger_id = rp.passenger_id " +
@@ -336,16 +300,10 @@ public class ReservationDAO {
         }
     }
 
-    /**
-     * Generate unique confirmation number
-     */
     private String generateConfirmationNumber() {
         return "FRA" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 
-    /**
-     * Map ResultSet to Reservation object
-     */
     private Reservation mapResultSetToReservation(ResultSet rs) throws SQLException {
         Reservation reservation = new Reservation();
         reservation.setReservationId(rs.getInt("reservation_id"));

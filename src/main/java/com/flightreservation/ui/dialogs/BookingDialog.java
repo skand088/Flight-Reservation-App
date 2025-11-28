@@ -33,15 +33,17 @@ import org.slf4j.LoggerFactory;
 
 import com.flightreservation.controller.ReservationController;
 import com.flightreservation.dao.SeatDAO;
-import com.flightreservation.model.Customer;
-import com.flightreservation.model.Flight;
-import com.flightreservation.model.Passenger;
-import com.flightreservation.model.Reservation;
-import com.flightreservation.model.Seat;
+import com.flightreservation.model.strategies.payment.BankTransferPaymentStrategy;
+import com.flightreservation.model.strategies.payment.CreditCardPaymentStrategy;
+import com.flightreservation.model.entities.Customer;
+import com.flightreservation.model.strategies.payment.DebitCardPaymentStrategy;
+import com.flightreservation.model.entities.Flight;
+import com.flightreservation.model.entities.Passenger;
+import com.flightreservation.model.strategies.payment.PayPalPaymentStrategy;
+import com.flightreservation.model.strategies.payment.PaymentStrategy;
+import com.flightreservation.model.entities.Reservation;
+import com.flightreservation.model.entities.Seat;
 
-/**
- * Dialog for booking a flight with seat selection
- */
 public class BookingDialog extends JDialog {
     private static final Logger logger = LoggerFactory.getLogger(BookingDialog.class);
 
@@ -55,7 +57,6 @@ public class BookingDialog extends JDialog {
     private List<Seat> availableSeats;
     private Seat selectedSeat;
 
-    // Passenger fields
     private JTextField firstNameField;
     private JTextField lastNameField;
     private JTextField ageField;
@@ -64,9 +65,19 @@ public class BookingDialog extends JDialog {
     private JTextField emailField;
     private JTextField phoneField;
 
-    // Payment fields
     private JComboBox<String> paymentMethodCombo;
     private JLabel totalLabel;
+
+    private JTextField cardNumberField;
+    private JTextField cardHolderField;
+    private JTextField expiryDateField;
+    private JTextField cvvField;
+    private JTextField accountNumberField;
+    private JTextField routingNumberField;
+    private JTextField bankNameField;
+    private JTextField paypalEmailField;
+    private JTextField paypalPasswordField;
+    private JPanel paymentDetailsPanel;
 
     private boolean bookingConfirmed = false;
 
@@ -86,24 +97,19 @@ public class BookingDialog extends JDialog {
     }
 
     private void initComponents() {
-        // Main panel with tabs
         JTabbedPane tabbedPane = new JTabbedPane();
 
-        // Tab 1: Flight Info & Seat Selection
         JPanel flightSeatPanel = createFlightSeatPanel();
         tabbedPane.addTab("Flight & Seat Selection", flightSeatPanel);
 
-        // Tab 2: Passenger Information
         JPanel passengerPanel = createPassengerPanel();
         tabbedPane.addTab("Passenger Information", passengerPanel);
 
-        // Tab 3: Payment
         JPanel paymentPanel = createPaymentPanel();
         tabbedPane.addTab("Payment", paymentPanel);
 
         add(tabbedPane, BorderLayout.CENTER);
 
-        // Button panel
         JPanel buttonPanel = createButtonPanel();
         add(buttonPanel, BorderLayout.SOUTH);
     }
@@ -112,7 +118,6 @@ public class BookingDialog extends JDialog {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
         panel.setBorder(new EmptyBorder(15, 15, 15, 15));
 
-        // Flight info section
         JPanel flightInfoPanel = new JPanel(new GridLayout(0, 2, 10, 8));
         flightInfoPanel.setBorder(BorderFactory.createTitledBorder(
                 BorderFactory.createLineBorder(Color.GRAY), "Flight Details"));
@@ -142,12 +147,10 @@ public class BookingDialog extends JDialog {
         flightInfoPanel.add(new JLabel("Base Price:"));
         flightInfoPanel.add(new JLabel("$" + String.format("%.2f", flight.getBasePrice())));
 
-        // Seat selection section
         JPanel seatPanel = new JPanel(new BorderLayout(10, 10));
         seatPanel.setBorder(BorderFactory.createTitledBorder(
                 BorderFactory.createLineBorder(Color.GRAY), "Select Your Seat"));
 
-        // Seats table
         String[] columnNames = { "Seat #", "Class", "Type", "Price", "Status" };
         seatsTableModel = new DefaultTableModel(columnNames, 0) {
             @Override
@@ -160,7 +163,6 @@ public class BookingDialog extends JDialog {
         seatsTable.setRowHeight(25);
         seatsTable.getTableHeader().setReorderingAllowed(false);
 
-        // Listen for seat selection
         seatsTable.getSelectionModel().addListSelectionListener(e -> {
             if (!e.getValueIsAdjusting()) {
                 int selectedRow = seatsTable.getSelectedRow();
@@ -175,10 +177,8 @@ public class BookingDialog extends JDialog {
         seatsScrollPane.setPreferredSize(new Dimension(0, 200));
         seatPanel.add(seatsScrollPane, BorderLayout.CENTER);
 
-        // Add refresh button
         JButton refreshSeatsButton = new JButton("Refresh Seats");
         refreshSeatsButton.setBackground(new Color(0, 123, 255));
-        refreshSeatsButton.setForeground(Color.WHITE);
         refreshSeatsButton.setFocusPainted(false);
         refreshSeatsButton.addActionListener(e -> loadAvailableSeats());
 
@@ -226,7 +226,6 @@ public class BookingDialog extends JDialog {
 
         panel.add(formPanel, BorderLayout.NORTH);
 
-        // Add info label
         JLabel infoLabel = new JLabel("<html><i>* Required fields<br><br>" +
                 "Please ensure all passenger information matches official travel documents.</i></html>");
         infoLabel.setBorder(new EmptyBorder(10, 0, 0, 0));
@@ -244,6 +243,7 @@ public class BookingDialog extends JDialog {
                 BorderFactory.createLineBorder(Color.GRAY), "Payment Information"));
 
         paymentMethodCombo = new JComboBox<>(new String[] { "CREDIT_CARD", "DEBIT_CARD", "PAYPAL", "BANK_TRANSFER" });
+        paymentMethodCombo.addActionListener(e -> updatePaymentFields());
 
         totalLabel = new JLabel("$" + String.format("%.2f", flight.getBasePrice()));
         totalLabel.setFont(new Font("Arial", Font.BOLD, 18));
@@ -256,7 +256,25 @@ public class BookingDialog extends JDialog {
 
         panel.add(formPanel, BorderLayout.NORTH);
 
-        // Payment summary
+        JPanel centerPanel = new JPanel(new BorderLayout(10, 10));
+
+        paymentDetailsPanel = new JPanel(new GridLayout(0, 2, 15, 10));
+        paymentDetailsPanel.setBorder(BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(Color.GRAY), "Payment Details"));
+
+        cardNumberField = new JTextField();
+        cardHolderField = new JTextField();
+        expiryDateField = new JTextField();
+        cvvField = new JTextField();
+        accountNumberField = new JTextField();
+        routingNumberField = new JTextField();
+        bankNameField = new JTextField();
+        paypalEmailField = new JTextField();
+        paypalPasswordField = new JTextField();
+
+        updatePaymentFields();
+        centerPanel.add(paymentDetailsPanel, BorderLayout.NORTH);
+
         JPanel summaryPanel = new JPanel(new BorderLayout());
         summaryPanel.setBorder(BorderFactory.createTitledBorder(
                 BorderFactory.createLineBorder(Color.GRAY), "Booking Summary"));
@@ -268,7 +286,9 @@ public class BookingDialog extends JDialog {
         updateSummary(summaryArea);
 
         summaryPanel.add(new JScrollPane(summaryArea), BorderLayout.CENTER);
-        panel.add(summaryPanel, BorderLayout.CENTER);
+        centerPanel.add(summaryPanel, BorderLayout.CENTER);
+
+        panel.add(centerPanel, BorderLayout.CENTER);
 
         return panel;
     }
@@ -279,7 +299,6 @@ public class BookingDialog extends JDialog {
 
         JButton confirmButton = new JButton("Confirm Booking");
         confirmButton.setBackground(new Color(40, 167, 69));
-        confirmButton.setForeground(Color.WHITE);
         confirmButton.setFocusPainted(false);
         confirmButton.setFont(new Font("Arial", Font.BOLD, 14));
         confirmButton.setPreferredSize(new Dimension(150, 35));
@@ -287,7 +306,6 @@ public class BookingDialog extends JDialog {
 
         JButton cancelButton = new JButton("Cancel");
         cancelButton.setBackground(new Color(108, 117, 125));
-        cancelButton.setForeground(Color.WHITE);
         cancelButton.setFocusPainted(false);
         cancelButton.setFont(new Font("Arial", Font.BOLD, 14));
         cancelButton.setPreferredSize(new Dimension(120, 35));
@@ -338,7 +356,6 @@ public class BookingDialog extends JDialog {
     }
 
     private void processBooking() {
-        // Validate seat selection
         if (selectedSeat == null) {
             JOptionPane.showMessageDialog(this,
                     "Please select a seat from the 'Flight & Seat Selection' tab.",
@@ -347,7 +364,6 @@ public class BookingDialog extends JDialog {
             return;
         }
 
-        // Validate passenger information
         if (firstNameField.getText().trim().isEmpty() ||
                 lastNameField.getText().trim().isEmpty() ||
                 ageField.getText().trim().isEmpty() ||
@@ -369,7 +385,6 @@ public class BookingDialog extends JDialog {
                 return;
             }
 
-            // Create passenger
             Passenger passenger = new Passenger();
             passenger.setFirstName(firstNameField.getText().trim());
             passenger.setLastName(lastNameField.getText().trim());
@@ -380,7 +395,6 @@ public class BookingDialog extends JDialog {
             passenger.setContactPhone(phoneField.getText().trim());
             passenger.setSeatId(selectedSeat.getSeatId());
 
-            // Confirm booking
             int confirm = JOptionPane.showConfirmDialog(this,
                     "Confirm booking?\n\n" +
                             "Passenger: " + passenger.getFirstName() + " " + passenger.getLastName() + "\n" +
@@ -395,7 +409,17 @@ public class BookingDialog extends JDialog {
                 return;
             }
 
-            // Process reservation
+            PaymentStrategy paymentStrategy = createPaymentStrategy();
+            if (paymentStrategy == null) {
+                JOptionPane.showMessageDialog(this,
+                        "Please fill in all required payment fields.",
+                        "Missing Payment Information",
+                        JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            reservationController.setPaymentStrategy(paymentStrategy);
+
             List<Passenger> passengers = new ArrayList<>();
             passengers.add(passenger);
 
@@ -404,13 +428,11 @@ public class BookingDialog extends JDialog {
                     flight.getFlightId(),
                     passengers);
 
-            // Confirm reservation (simulate payment)
             reservationController.confirmReservation(reservation.getReservationId());
 
             bookingConfirmed = true;
             dispose();
 
-            // Show success message
             JOptionPane.showMessageDialog(getParent(),
                     "Booking Successful!\n\n" +
                             "Confirmation Number: " + reservation.getConfirmationNumber() + "\n" +
@@ -434,6 +456,106 @@ public class BookingDialog extends JDialog {
                             "\n\nPlease try again or contact support.",
                     "Booking Error",
                     JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void updatePaymentFields() {
+        paymentDetailsPanel.removeAll();
+        String selectedMethod = (String) paymentMethodCombo.getSelectedItem();
+
+        switch (selectedMethod) {
+            case "CREDIT_CARD":
+            case "DEBIT_CARD":
+                paymentDetailsPanel.add(createBoldLabel("Card Number: *"));
+                paymentDetailsPanel.add(cardNumberField);
+                paymentDetailsPanel.add(createBoldLabel("Card Holder: *"));
+                paymentDetailsPanel.add(cardHolderField);
+                paymentDetailsPanel.add(createBoldLabel("Expiry (MM/YY): *"));
+                paymentDetailsPanel.add(expiryDateField);
+                paymentDetailsPanel.add(createBoldLabel(selectedMethod.equals("CREDIT_CARD") ? "CVV: *" : "PIN: *"));
+                paymentDetailsPanel.add(cvvField);
+                break;
+            case "PAYPAL":
+                paymentDetailsPanel.add(createBoldLabel("PayPal Email: *"));
+                paymentDetailsPanel.add(paypalEmailField);
+                paymentDetailsPanel.add(createBoldLabel("PayPal Password: *"));
+                paymentDetailsPanel.add(paypalPasswordField);
+                break;
+            case "BANK_TRANSFER":
+                paymentDetailsPanel.add(createBoldLabel("Bank Name: *"));
+                paymentDetailsPanel.add(bankNameField);
+                paymentDetailsPanel.add(createBoldLabel("Account Number: *"));
+                paymentDetailsPanel.add(accountNumberField);
+                paymentDetailsPanel.add(createBoldLabel("Routing Number: *"));
+                paymentDetailsPanel.add(routingNumberField);
+                paymentDetailsPanel.add(createBoldLabel("Account Holder: *"));
+                paymentDetailsPanel.add(cardHolderField);
+                break;
+        }
+
+        paymentDetailsPanel.revalidate();
+        paymentDetailsPanel.repaint();
+    }
+
+    private PaymentStrategy createPaymentStrategy() {
+        String selectedMethod = (String) paymentMethodCombo.getSelectedItem();
+
+        try {
+            switch (selectedMethod) {
+                case "CREDIT_CARD":
+                    if (cardNumberField.getText().trim().isEmpty() ||
+                            cardHolderField.getText().trim().isEmpty() ||
+                            expiryDateField.getText().trim().isEmpty() ||
+                            cvvField.getText().trim().isEmpty()) {
+                        return null;
+                    }
+                    return new CreditCardPaymentStrategy(
+                            cardNumberField.getText().trim(),
+                            cardHolderField.getText().trim(),
+                            expiryDateField.getText().trim(),
+                            cvvField.getText().trim());
+
+                case "DEBIT_CARD":
+                    if (cardNumberField.getText().trim().isEmpty() ||
+                            cardHolderField.getText().trim().isEmpty() ||
+                            expiryDateField.getText().trim().isEmpty() ||
+                            cvvField.getText().trim().isEmpty()) {
+                        return null;
+                    }
+                    return new DebitCardPaymentStrategy(
+                            cardNumberField.getText().trim(),
+                            cardHolderField.getText().trim(),
+                            expiryDateField.getText().trim(),
+                            cvvField.getText().trim());
+
+                case "PAYPAL":
+                    if (paypalEmailField.getText().trim().isEmpty() ||
+                            paypalPasswordField.getText().trim().isEmpty()) {
+                        return null;
+                    }
+                    return new PayPalPaymentStrategy(
+                            paypalEmailField.getText().trim(),
+                            paypalPasswordField.getText().trim());
+
+                case "BANK_TRANSFER":
+                    if (bankNameField.getText().trim().isEmpty() ||
+                            accountNumberField.getText().trim().isEmpty() ||
+                            routingNumberField.getText().trim().isEmpty() ||
+                            cardHolderField.getText().trim().isEmpty()) {
+                        return null;
+                    }
+                    return new BankTransferPaymentStrategy(
+                            bankNameField.getText().trim(),
+                            accountNumberField.getText().trim(),
+                            routingNumberField.getText().trim(),
+                            cardHolderField.getText().trim());
+
+                default:
+                    return null;
+            }
+        } catch (Exception e) {
+            logger.error("Error creating payment strategy", e);
+            return null;
         }
     }
 

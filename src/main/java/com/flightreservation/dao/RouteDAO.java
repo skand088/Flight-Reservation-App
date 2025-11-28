@@ -1,7 +1,7 @@
 package com.flightreservation.dao;
 
 import com.flightreservation.database.DatabaseManager;
-import com.flightreservation.model.Route;
+import com.flightreservation.model.entities.Route;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -9,15 +9,9 @@ import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * DAO for Route operations
- */
 public class RouteDAO {
     private static final Logger logger = LoggerFactory.getLogger(RouteDAO.class);
 
-    /**
-     * Get all routes
-     */
     public List<Route> getAllRoutes() {
         List<Route> routes = new ArrayList<>();
         String sql = "SELECT * FROM routes ORDER BY origin_airport, destination_airport";
@@ -36,9 +30,6 @@ public class RouteDAO {
         return routes;
     }
 
-    /**
-     * Get route by ID
-     */
     public Route getRouteById(int routeId) {
         String sql = "SELECT * FROM routes WHERE route_id = ?";
 
@@ -57,9 +48,6 @@ public class RouteDAO {
         return null;
     }
 
-    /**
-     * Create new route
-     */
     public boolean createRoute(Route route) {
         String sql = "INSERT INTO routes (origin_airport, destination_airport, distance, estimated_duration) " +
                 "VALUES (?, ?, ?, ?)";
@@ -87,9 +75,6 @@ public class RouteDAO {
         return false;
     }
 
-    /**
-     * Update route
-     */
     public boolean updateRoute(Route route) {
         String sql = "UPDATE routes SET origin_airport = ?, destination_airport = ?, distance = ?, " +
                 "estimated_duration = ? WHERE route_id = ?";
@@ -114,9 +99,6 @@ public class RouteDAO {
         return false;
     }
 
-    /**
-     * Delete route
-     */
     public boolean deleteRoute(int routeId) {
         String sql = "DELETE FROM routes WHERE route_id = ?";
 
@@ -135,9 +117,6 @@ public class RouteDAO {
         return false;
     }
 
-    /**
-     * Map ResultSet to Route object
-     */
     private Route mapResultSetToRoute(ResultSet rs) throws SQLException {
         Route route = new Route();
         route.setRouteId(rs.getInt("route_id"));

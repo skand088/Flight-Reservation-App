@@ -12,17 +12,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.flightreservation.database.DatabaseManager;
-import com.flightreservation.model.Customer;
+import com.flightreservation.model.entities.Customer;
+import com.flightreservation.model.entities.User;
 
-/**
- * DAO for Customer operations
- */
 public class CustomerDAO {
     private static final Logger logger = LoggerFactory.getLogger(CustomerDAO.class);
 
-    /**
-     * Get customer by user ID
-     */
     public Customer getCustomerByUserId(int userId) {
         String sql = "SELECT c.customer_id, c.frequent_flyer_number, c.loyalty_points, c.preferred_airline, c.address, "
                 +
@@ -44,9 +39,6 @@ public class CustomerDAO {
         return null;
     }
 
-    /**
-     * Get customer by ID
-     */
     public Customer getCustomerById(int customerId) {
         String sql = "SELECT c.customer_id, c.frequent_flyer_number, c.loyalty_points, c.preferred_airline, c.address, "
                 +
@@ -68,9 +60,6 @@ public class CustomerDAO {
         return null;
     }
 
-    /**
-     * Get all customers
-     */
     public List<Customer> getAllCustomers() {
         List<Customer> customers = new ArrayList<>();
         String sql = "SELECT c.customer_id, c.frequent_flyer_number, c.loyalty_points, c.preferred_airline, c.address, "
@@ -92,9 +81,6 @@ public class CustomerDAO {
         return customers;
     }
 
-    /**
-     * Search customers by name or email
-     */
     public List<Customer> searchCustomers(String keyword) {
         List<Customer> customers = new ArrayList<>();
         String sql = "SELECT c.customer_id, c.frequent_flyer_number, c.loyalty_points, c.preferred_airline, c.address, "
@@ -123,9 +109,6 @@ public class CustomerDAO {
         return customers;
     }
 
-    /**
-     * Create new customer
-     */
     public boolean createCustomer(Customer customer) {
         String sql = "INSERT INTO customers (customer_id, frequent_flyer_number, loyalty_points, preferred_airline, address) "
                 +
@@ -134,7 +117,7 @@ public class CustomerDAO {
         try (Connection conn = DatabaseManager.getInstance().getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            stmt.setInt(1, customer.getUserId()); // customer_id is the user_id
+            stmt.setInt(1, customer.getUserId());
             stmt.setString(2, customer.getFrequentFlyerNumber());
             stmt.setInt(3, customer.getLoyaltyPoints());
             stmt.setString(4, customer.getPreferredAirline());
@@ -152,9 +135,6 @@ public class CustomerDAO {
         return false;
     }
 
-    /**
-     * Update customer
-     */
     public boolean updateCustomer(Customer customer) {
         String sql = "UPDATE customers SET frequent_flyer_number = ?, loyalty_points = ?, preferred_airline = ?, address = ? "
                 +
@@ -180,9 +160,6 @@ public class CustomerDAO {
         return false;
     }
 
-    /**
-     * Delete customer
-     */
     public boolean deleteCustomer(int customerId) {
         String sql = "DELETE FROM customers WHERE customer_id = ?";
 
@@ -201,42 +178,33 @@ public class CustomerDAO {
         return false;
     }
 
-    /**
-     * Map ResultSet to Customer object
-     */
     private Customer mapResultSetToCustomer(ResultSet rs) throws SQLException {
         Customer customer = new Customer();
         customer.setCustomerId(rs.getInt("customer_id"));
 
-        // In the schema, customer_id is the same as user_id (FK relationship)
         customer.setUserId(rs.getInt("customer_id"));
 
-        // Map schema fields to Customer model
         customer.setAddress(rs.getString("address"));
         customer.setFrequentFlyerNumber(rs.getString("frequent_flyer_number"));
         customer.setLoyaltyPoints(rs.getInt("loyalty_points"));
         customer.setPreferredAirline(rs.getString("preferred_airline"));
 
-        // Populate User object if columns are available
         try {
-            com.flightreservation.model.User user = new com.flightreservation.model.User();
-            user.setUserId(rs.getInt("customer_id")); // customer_id is the user_id
+            User user = new User();
+            user.setUserId(rs.getInt("customer_id"));
             user.setUsername(rs.getString("username"));
             user.setEmail(rs.getString("email"));
             user.setPhoneNumber(rs.getString("phone_number"));
 
-            // Try to get additional user fields if available
             try {
-                user.setRole(com.flightreservation.model.User.UserRole.valueOf(rs.getString("role")));
+                user.setRole(User.UserRole.valueOf(rs.getString("role")));
                 user.setAccountStatus(
-                        com.flightreservation.model.User.AccountStatus.valueOf(rs.getString("account_status")));
+                        User.AccountStatus.valueOf(rs.getString("account_status")));
             } catch (SQLException e) {
-                // These columns might not be in the SELECT, that's okay
             }
 
             customer.setUser(user);
         } catch (SQLException e) {
-            // User columns might not be in the SELECT, that's okay
         }
 
         return customer;

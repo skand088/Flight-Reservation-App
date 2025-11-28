@@ -410,18 +410,88 @@ ON DUPLICATE KEY UPDATE passenger_id=passenger_id;
 -- SAMPLE DATA - SEATS
 -- ============================================================================
 
--- Generate seats for Flight 1 (AA101 - Boeing 737-800, 189 seats)
-INSERT INTO seats (seat_number, seat_class, seat_type, price, seat_status, flight_id) VALUES
-('1A', 'BUSINESS', 'WINDOW', 899.99, 'AVAILABLE', 1),
-('1B', 'BUSINESS', 'MIDDLE', 899.99, 'AVAILABLE', 1),
-('1C', 'BUSINESS', 'AISLE', 899.99, 'AVAILABLE', 1),
-('12A', 'ECONOMY', 'WINDOW', 299.99, 'RESERVED', 1),
-('12B', 'ECONOMY', 'MIDDLE', 299.99, 'AVAILABLE', 1),
-('12C', 'ECONOMY', 'AISLE', 299.99, 'AVAILABLE', 1),
-('15A', 'ECONOMY', 'WINDOW', 299.99, 'AVAILABLE', 1),
-('15B', 'ECONOMY', 'MIDDLE', 299.99, 'AVAILABLE', 1),
-('15C', 'ECONOMY', 'AISLE', 299.99, 'AVAILABLE', 1)
-ON DUPLICATE KEY UPDATE seat_id=seat_id;
+-- Drop procedure if it exists from previous runs
+DROP PROCEDURE IF EXISTS GenerateSeatsForFlight;
+
+-- Delete all existing data to start fresh (respecting foreign key constraints)
+DELETE FROM reservation_passengers WHERE reservation_id > 0 OR reservation_id = 0;
+DELETE FROM seats WHERE seat_id > 0 OR seat_id = 0;
+
+-- Stored procedure to generate seats for a flight
+DELIMITER //
+CREATE PROCEDURE GenerateSeatsForFlight(
+    IN p_flight_id INT,
+    IN p_total_seats INT,
+    IN p_base_price DECIMAL(10,2)
+)
+BEGIN
+    DECLARE seat_counter INT DEFAULT 1;
+    DECLARE row_num INT;
+    DECLARE seat_letter CHAR(1);
+    DECLARE seat_class_type VARCHAR(10);
+    DECLARE seat_type_val VARCHAR(10);
+    DECLARE seat_price DECIMAL(10,2);
+    DECLARE business_seats INT;
+    DECLARE seat_position INT;
+    
+    -- Delete existing seats for this flight first
+    DELETE FROM seats WHERE flight_id = p_flight_id;
+    
+    -- Calculate business class seats (approximately 15% of total)
+    SET business_seats = FLOOR(p_total_seats * 0.15);
+    
+    WHILE seat_counter <= p_total_seats DO
+        -- Determine row number (6 seats per row: A,B,C,D,E,F)
+        SET row_num = CEILING(seat_counter / 6);
+        SET seat_position = ((seat_counter - 1) MOD 6) + 1;
+        
+        -- Determine seat letter
+        SET seat_letter = CASE seat_position
+            WHEN 1 THEN 'A'
+            WHEN 2 THEN 'B'
+            WHEN 3 THEN 'C'
+            WHEN 4 THEN 'D'
+            WHEN 5 THEN 'E'
+            WHEN 6 THEN 'F'
+        END;
+        
+        -- Determine seat class
+        IF seat_counter <= business_seats THEN
+            SET seat_class_type = 'BUSINESS';
+            SET seat_price = p_base_price * 3;
+        ELSE
+            SET seat_class_type = 'ECONOMY';
+            SET seat_price = p_base_price;
+        END IF;
+        
+        -- Determine seat type (window, middle, aisle)
+        SET seat_type_val = CASE seat_position
+            WHEN 1 THEN 'WINDOW'
+            WHEN 2 THEN 'MIDDLE'
+            WHEN 3 THEN 'AISLE'
+            WHEN 4 THEN 'AISLE'
+            WHEN 5 THEN 'MIDDLE'
+            WHEN 6 THEN 'WINDOW'
+        END;
+        
+        -- Insert seat
+        INSERT INTO seats (seat_number, seat_class, seat_type, price, status, flight_id)
+        VALUES (CONCAT(row_num, seat_letter), seat_class_type, seat_type_val, seat_price, 'AVAILABLE', p_flight_id);
+        
+        SET seat_counter = seat_counter + 1;
+    END WHILE;
+END //
+DELIMITER ;
+
+-- Generate seats for all flights based on their aircraft capacity
+CALL GenerateSeatsForFlight(1, 189, 299.99);  -- AA101: Boeing 737-800
+CALL GenerateSeatsForFlight(2, 180, 249.99);  -- DL202: Airbus A320
+CALL GenerateSeatsForFlight(3, 189, 199.99);  -- UA303: Boeing 737-800
+CALL GenerateSeatsForFlight(4, 396, 599.99);  -- BA404: Boeing 777-300ER
+CALL GenerateSeatsForFlight(5, 180, 149.99);  -- AF505: Airbus A320
+CALL GenerateSeatsForFlight(6, 189, 129.99);  -- LH606: Boeing 737-800
+CALL GenerateSeatsForFlight(7, 525, 899.99);  -- EK707: Airbus A380
+CALL GenerateSeatsForFlight(8, 290, 349.99);  -- AA808: Boeing 787-9
 
 -- ============================================================================
 -- SAMPLE DATA - RESERVATIONS
@@ -440,9 +510,17 @@ SET @res2_id = (SELECT reservation_id FROM reservations WHERE confirmation_numbe
 -- SAMPLE DATA - RESERVATION PASSENGERS
 -- ============================================================================
 
+-- Reserve specific seats and link to passengers
+SET @seat1 = (SELECT seat_id FROM seats WHERE flight_id = 1 AND seat_number = '20A' LIMIT 1);
+SET @seat2 = (SELECT seat_id FROM seats WHERE flight_id = 2 AND seat_number = '1A' LIMIT 1);
+
+-- Update seat status to RESERVED
+UPDATE seats SET status = 'RESERVED' WHERE seat_id = @seat1;
+UPDATE seats SET status = 'RESERVED' WHERE seat_id = @seat2;
+
 INSERT INTO reservation_passengers (reservation_id, passenger_id, seat_id) VALUES
-(@res1_id, 1, 4),  -- John Doe on seat 12A
-(@res2_id, 2, 1)   -- Jane Smith on seat 1A (business class on flight 2)
+(@res1_id, 1, @seat1),  -- John Doe on seat 20A (economy)
+(@res2_id, 2, @seat2)   -- Jane Smith on seat 1A (business class)
 ON DUPLICATE KEY UPDATE reservation_id=reservation_id;
 
 -- ============================================================================
@@ -453,6 +531,22 @@ INSERT INTO payments (payment_date, amount, payment_method, status, transaction_
 ('2025-11-20 10:35:00', 299.99, 'CREDIT_CARD', 'COMPLETED', 'TXN001234567890', @res1_id),
 ('2025-11-21 14:20:00', 249.99, 'DEBIT_CARD', 'COMPLETED', 'TXN001234567891', @res2_id)
 ON DUPLICATE KEY UPDATE payment_id=payment_id;
+
+-- ============================================================================
+-- UPDATE AVAILABLE SEATS COUNT
+-- ============================================================================
+
+-- Update available_seats for all flights based on actual seat availability
+UPDATE flights f
+SET available_seats = (
+    SELECT COUNT(*) 
+    FROM seats s 
+    WHERE s.flight_id = f.flight_id AND s.status = 'AVAILABLE'
+)
+WHERE f.flight_id > 0;
+
+-- Drop the procedure after use
+DROP PROCEDURE IF EXISTS GenerateSeatsForFlight;
 
 COMMIT;
 
@@ -475,7 +569,18 @@ SELECT CONCAT('  Airlines: ', COUNT(*), ' records') AS '' FROM airlines;
 SELECT CONCAT('  Aircraft: ', COUNT(*), ' records') AS '' FROM aircraft;
 SELECT CONCAT('  Routes: ', COUNT(*), ' records') AS '' FROM routes;
 SELECT CONCAT('  Flights: ', COUNT(*), ' records') AS '' FROM flights;
+SELECT CONCAT('  Seats: ', COUNT(*), ' records') AS '' FROM seats;
 SELECT CONCAT('  Users: ', COUNT(*), ' records') AS '' FROM users;
 SELECT CONCAT('  Reservations: ', COUNT(*), ' records') AS '' FROM reservations;
+SELECT '' AS '';
+SELECT 'Flight Seat Summary:' AS '';
+SELECT 
+    f.flight_number,
+    f.available_seats AS 'Available',
+    ac.total_seats AS 'Total',
+    CONCAT(ROUND((f.available_seats / ac.total_seats) * 100, 1), '%') AS 'Availability'
+FROM flights f
+JOIN aircraft ac ON f.aircraft_id = ac.aircraft_id
+ORDER BY f.flight_id;
 SELECT '' AS '';
 SELECT 'Ready to use!' AS '';

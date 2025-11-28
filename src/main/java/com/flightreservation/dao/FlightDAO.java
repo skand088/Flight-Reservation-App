@@ -1,24 +1,27 @@
 package com.flightreservation.dao;
 
-import com.flightreservation.database.DatabaseManager;
-import com.flightreservation.model.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * DAO for Flight operations
- */
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.flightreservation.database.DatabaseManager;
+import com.flightreservation.model.entities.Aircraft;
+import com.flightreservation.model.entities.Airline;
+import com.flightreservation.model.entities.Flight;
+import com.flightreservation.model.entities.Route;
+
 public class FlightDAO {
     private static final Logger logger = LoggerFactory.getLogger(FlightDAO.class);
 
-    /**
-     * Search flights by origin, destination and date
-     */
     public List<Flight> searchFlights(String origin, String destination, LocalDateTime departureDate) {
         List<Flight> flights = new ArrayList<>();
         String sql = "SELECT f.*, r.origin_airport, r.destination_airport, " +
@@ -52,9 +55,6 @@ public class FlightDAO {
         return flights;
     }
 
-    /**
-     * Get flight by ID with full details
-     */
     public Flight getFlightById(int flightId) {
         String sql = "SELECT f.*, r.origin_airport, r.destination_airport, r.distance, r.estimated_duration, " +
                 "a.model as aircraft_model, a.manufacturer, a.total_seats, " +
@@ -80,9 +80,6 @@ public class FlightDAO {
         return null;
     }
 
-    /**
-     * Get all flights
-     */
     public List<Flight> getAllFlights() {
         List<Flight> flights = new ArrayList<>();
         String sql = "SELECT f.*, r.origin_airport, r.destination_airport, " +
@@ -108,9 +105,6 @@ public class FlightDAO {
         return flights;
     }
 
-    /**
-     * Create new flight
-     */
     public boolean createFlight(Flight flight) {
         String sql = "INSERT INTO flights (flight_number, departure_time, arrival_time, duration, " +
                 "flight_status, base_price, available_seats, aircraft_id, route_id, airline_id) " +
@@ -145,9 +139,6 @@ public class FlightDAO {
         return false;
     }
 
-    /**
-     * Update flight
-     */
     public boolean updateFlight(Flight flight) {
         String sql = "UPDATE flights SET flight_number = ?, departure_time = ?, arrival_time = ?, " +
                 "duration = ?, flight_status = ?, base_price = ?, available_seats = ?, " +
@@ -179,9 +170,6 @@ public class FlightDAO {
         return false;
     }
 
-    /**
-     * Delete flight
-     */
     public boolean deleteFlight(int flightId) {
         String sql = "DELETE FROM flights WHERE flight_id = ?";
 
@@ -200,9 +188,6 @@ public class FlightDAO {
         return false;
     }
 
-    /**
-     * Update available seats count
-     */
     public boolean updateAvailableSeats(int flightId, int seatChange) {
         String sql = "UPDATE flights SET available_seats = available_seats + ? WHERE flight_id = ?";
 
@@ -220,9 +205,6 @@ public class FlightDAO {
         return false;
     }
 
-    /**
-     * Map ResultSet to Flight object
-     */
     private Flight mapResultSetToFlight(ResultSet rs) throws SQLException {
         Flight flight = new Flight();
         flight.setFlightId(rs.getInt("flight_id"));
@@ -251,7 +233,6 @@ public class FlightDAO {
         flight.setRouteId(rs.getInt("route_id"));
         flight.setAirlineId(rs.getInt("airline_id"));
 
-        // Create and populate route
         try {
             Route route = new Route();
             route.setRouteId(rs.getInt("route_id"));
@@ -259,10 +240,8 @@ public class FlightDAO {
             route.setDestinationAirport(rs.getString("destination_airport"));
             flight.setRoute(route);
         } catch (SQLException e) {
-            // Route columns may not be present in all queries
         }
 
-        // Create and populate aircraft
         try {
             Aircraft aircraft = new Aircraft();
             aircraft.setAircraftId(rs.getInt("aircraft_id"));
@@ -270,10 +249,8 @@ public class FlightDAO {
             aircraft.setManufacturer(rs.getString("manufacturer"));
             flight.setAircraft(aircraft);
         } catch (SQLException e) {
-            // Aircraft columns may not be present in all queries
         }
 
-        // Create and populate airline
         try {
             Airline airline = new Airline();
             airline.setAirlineId(rs.getInt("airline_id"));
@@ -281,7 +258,6 @@ public class FlightDAO {
             airline.setAirlineCode(rs.getString("airline_code"));
             flight.setAirline(airline);
         } catch (SQLException e) {
-            // Airline columns may not be present in all queries
         }
 
         return flight;

@@ -1,24 +1,23 @@
 package com.flightreservation.dao;
 
-import com.flightreservation.database.DatabaseManager;
-import com.flightreservation.model.Newsletter;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import java.sql.*;
-import java.time.LocalDateTime;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * DAO for Newsletter operations
- */
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.flightreservation.database.DatabaseManager;
+import com.flightreservation.model.entities.Newsletter;
+
 public class NewsletterDAO {
     private static final Logger logger = LoggerFactory.getLogger(NewsletterDAO.class);
 
-    /**
-     * Save a newsletter to database
-     */
     public boolean saveNewsletter(Newsletter newsletter) {
         String sql = "INSERT INTO newsletters (subject, message, sent_date) VALUES (?, ?, ?)";
 
@@ -44,9 +43,6 @@ public class NewsletterDAO {
         return false;
     }
 
-    /**
-     * Get all newsletters ordered by date (newest first)
-     */
     public List<Newsletter> getAllNewsletters() {
         List<Newsletter> newsletters = new ArrayList<>();
         String sql = "SELECT * FROM newsletters ORDER BY sent_date DESC";
@@ -65,9 +61,6 @@ public class NewsletterDAO {
         return newsletters;
     }
 
-    /**
-     * Get recent newsletters (last N)
-     */
     public List<Newsletter> getRecentNewsletters(int limit) {
         List<Newsletter> newsletters = new ArrayList<>();
         String sql = "SELECT * FROM newsletters ORDER BY sent_date DESC LIMIT ?";
@@ -87,9 +80,6 @@ public class NewsletterDAO {
         return newsletters;
     }
 
-    /**
-     * Delete a newsletter
-     */
     public boolean deleteNewsletter(int newsletterId) {
         String sql = "DELETE FROM newsletters WHERE newsletter_id = ?";
 

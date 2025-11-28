@@ -1,85 +1,61 @@
 package com.flightreservation.database;
 
-import com.zaxxer.hikari.HikariConfig;
-import com.zaxxer.hikari.HikariDataSource;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.SQLException;
 import java.util.Properties;
 
-/**
- * Manages database connections using HikariCP connection pooling
- * Thread-safe singleton for database access across the application
- */
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 public class DatabaseManager {
     private static final Logger logger = LoggerFactory.getLogger(DatabaseManager.class);
-    private static DatabaseManager instance;
-    private HikariDataSource dataSource;
+    private static volatile DatabaseManager instance;
+    private String jdbcUrl;
+    private String username;
+    private String password;
 
     private DatabaseManager() {
-        initializeDataSource();
+        initializeDatabase();
     }
 
-    /**
-     * Get the singleton instance of DatabaseManager
-     */
-    public static synchronized DatabaseManager getInstance() {
+    public static DatabaseManager getInstance() {
         if (instance == null) {
-            instance = new DatabaseManager();
+            synchronized (DatabaseManager.class) {
+                if (instance == null) {
+                    instance = new DatabaseManager();
+                }
+            }
         }
         return instance;
     }
 
-    /**
-     * Initialize HikariCP data source with configuration from properties file
-     */
-    private void initializeDataSource() {
+    private void initializeDatabase() {
         try {
+            Class.forName("com.mysql.cj.jdbc.Driver");
+
             Properties props = loadDatabaseProperties();
 
-            HikariConfig config = new HikariConfig();
-            config.setJdbcUrl(buildJdbcUrl(props));
-            config.setUsername(props.getProperty("db.username"));
-            config.setPassword(props.getProperty("db.password"));
+            this.jdbcUrl = buildJdbcUrl(props);
+            this.username = props.getProperty("db.username");
+            this.password = props.getProperty("db.password");
 
-            // Connection pool settings
-            config.setMaximumPoolSize(Integer.parseInt(
-                    props.getProperty("db.pool.maxPoolSize", "10")));
-            config.setMinimumIdle(Integer.parseInt(
-                    props.getProperty("db.pool.minIdle", "2")));
-            config.setConnectionTimeout(Long.parseLong(
-                    props.getProperty("db.pool.connectionTimeout", "30000")));
-            config.setIdleTimeout(Long.parseLong(
-                    props.getProperty("db.pool.idleTimeout", "600000")));
-            config.setMaxLifetime(Long.parseLong(
-                    props.getProperty("db.pool.maxLifetime", "1800000")));
+            logger.info("Database manager initialized successfully");
 
-            // Additional settings
-            config.setPoolName("FlightReservationPool");
-            config.addDataSourceProperty("cachePrepStmts", "true");
-            config.addDataSourceProperty("prepStmtCacheSize", "250");
-            config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
-
-            dataSource = new HikariDataSource(config);
-            logger.info("Database connection pool initialized successfully");
-
+        } catch (ClassNotFoundException e) {
+            logger.error("MySQL JDBC Driver not found", e);
+            throw new RuntimeException("MySQL Driver not found", e);
         } catch (IOException e) {
             logger.error("Failed to load database properties", e);
             throw new RuntimeException("Database configuration error", e);
         }
     }
 
-    /**
-     * Load database properties from file
-     */
     private Properties loadDatabaseProperties() throws IOException {
         Properties props = new Properties();
 
-        // Try to load database.properties first
         try (InputStream input = getClass().getClassLoader()
                 .getResourceAsStream("database.properties")) {
             if (input != null) {
@@ -88,7 +64,6 @@ public class DatabaseManager {
             }
         }
 
-        // Fall back to template if database.properties doesn't exist
         try (InputStream input = getClass().getClassLoader()
                 .getResourceAsStream("database.properties.template")) {
             if (input != null) {
@@ -102,20 +77,15 @@ public class DatabaseManager {
         throw new IOException("No database configuration file found");
     }
 
-    /**
-     * Build JDBC URL from properties
-     */
     private String buildJdbcUrl(Properties props) {
         String url = props.getProperty("db.url");
         if (url != null && !url.isEmpty()) {
-            // Replace placeholders if present
             url = url.replace("${db.host}", props.getProperty("db.host", "localhost"));
             url = url.replace("${db.port}", props.getProperty("db.port", "3306"));
             url = url.replace("${db.name}", props.getProperty("db.name", "flight_reservation_db"));
             return url;
         }
 
-        // Build URL from components
         String host = props.getProperty("db.host", "localhost");
         String port = props.getProperty("db.port", "3306");
         String dbName = props.getProperty("db.name", "flight_reservation_db");
@@ -123,19 +93,13 @@ public class DatabaseManager {
                 host, port, dbName);
     }
 
-    /**
-     * Get a database connection from the pool
-     */
     public Connection getConnection() throws SQLException {
-        if (dataSource == null) {
-            throw new SQLException("DataSource not initialized");
+        if (jdbcUrl == null || username == null) {
+            throw new SQLException("Database not initialized");
         }
-        return dataSource.getConnection();
+        return DriverManager.getConnection(jdbcUrl, username, password);
     }
 
-    /**
-     * Test database connectivity
-     */
     public boolean testConnection() {
         try (Connection conn = getConnection()) {
             return conn != null && !conn.isClosed();
@@ -145,13 +109,7 @@ public class DatabaseManager {
         }
     }
 
-    /**
-     * Close the data source and release all connections
-     */
     public void shutdown() {
-        if (dataSource != null && !dataSource.isClosed()) {
-            dataSource.close();
-            logger.info("Database connection pool shut down");
-        }
+        logger.info("Database manager shutdown");
     }
 }

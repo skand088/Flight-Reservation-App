@@ -1,15 +1,10 @@
 package com.flightreservation.observer;
 
 /**
- * Types of notifications that can be sent
+ * types of notifications that can be sent
  */
 public enum NotificationType {
-    NEWSLETTER("Newsletter"),
-    PROMOTION("Promotion"),
-    BOOKING_CONFIRMATION("Booking Confirmation"),
-    FLIGHT_UPDATE("Flight Update"),
-    CANCELLATION("Cancellation"),
-    REMINDER("Reminder");
+    NEWSLETTER("Newsletter"); // only one used in our current UI implementation, extendable for future
 
     private final String displayName;
 
