@@ -1,6 +1,5 @@
 package com.flightreservation.model.entities;
 
-
 import java.time.LocalDateTime;
 
 // subject for newsletter observer pattern used by customers
