@@ -7,8 +7,8 @@ import javax.swing.JPanel;
 import javax.swing.JTable;
 
 import com.flightreservation.dao.RouteDAO;
-import com.flightreservation.ui.panels.common.BaseManagementPanel;
 import com.flightreservation.model.entities.Route;
+import com.flightreservation.ui.panels.common.BaseManagementPanel;
 import com.flightreservation.ui.util.FormBuilder;
 import com.flightreservation.ui.util.TableFactory;
 
@@ -17,6 +17,7 @@ public class RouteManagementPanel extends BaseManagementPanel<Route> {
 
     public RouteManagementPanel() {
         this.routeDAO = new RouteDAO();
+        loadData();
     }
 
     @Override

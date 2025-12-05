@@ -1,8 +1,18 @@
 package com.flightreservation.ui.panels.common;
 
-import javax.swing.*;
+import java.awt.BorderLayout;
+import java.awt.FlowLayout;
+import java.awt.Font;
+
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JTable;
+import javax.swing.SwingConstants;
 import javax.swing.table.DefaultTableModel;
-import java.awt.*;
 
 public abstract class BaseManagementPanel<T> extends JPanel {
     protected JTable table;
@@ -10,7 +20,6 @@ public abstract class BaseManagementPanel<T> extends JPanel {
 
     public BaseManagementPanel() {
         initializeUI();
-        loadData();
     }
 
     private void initializeUI() {
@@ -76,12 +85,20 @@ public abstract class BaseManagementPanel<T> extends JPanel {
     }
 
     protected abstract String getTitle();
+
     protected abstract String getTableTitle();
+
     protected abstract String getEntityName();
+
     protected abstract JTable createTable();
+
     protected abstract void loadData();
+
     protected abstract T getItemFromRow(int row);
+
     protected abstract void add();
+
     protected abstract void edit();
+
     protected abstract void delete();
 }

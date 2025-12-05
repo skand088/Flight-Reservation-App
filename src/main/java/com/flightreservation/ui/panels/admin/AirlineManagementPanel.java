@@ -11,14 +11,15 @@ import javax.swing.JTextField;
 import javax.swing.table.DefaultTableModel;
 
 import com.flightreservation.dao.AirlineDAO;
-import com.flightreservation.ui.panels.common.BaseManagementPanel;
 import com.flightreservation.model.entities.Airline;
+import com.flightreservation.ui.panels.common.BaseManagementPanel;
 
 public class AirlineManagementPanel extends BaseManagementPanel<Airline> {
     private final AirlineDAO airlineDAO;
 
     public AirlineManagementPanel() {
         this.airlineDAO = new AirlineDAO();
+        loadData();
     }
 
     @Override

@@ -25,8 +25,10 @@ public class CustomerManagementController {
         List<Customer> customers = customerDAO.getAllCustomers();
 
         for (Customer customer : customers) {
-            User user = userDAO.getUserById(customer.getUserId());
-            customer.setUser(user);
+            if (customer.getUser() == null) {
+                User user = userDAO.getUserById(customer.getUserId());
+                customer.setUser(user);
+            }
         }
 
         return customers;
@@ -42,8 +44,10 @@ public class CustomerManagementController {
         List<Customer> customers = customerDAO.searchCustomers(keyword);
 
         for (Customer customer : customers) {
-            User user = userDAO.getUserById(customer.getUserId());
-            customer.setUser(user);
+            if (customer.getUser() == null) {
+                User user = userDAO.getUserById(customer.getUserId());
+                customer.setUser(user);
+            }
         }
 
         return customers;
@@ -76,13 +80,9 @@ public class CustomerManagementController {
 
         if (userDAO.createUser(user)) {
             customer.setUserId(user.getUserId());
-            if (customerDAO.createCustomer(customer)) {
-                logger.info("Customer created successfully");
-                return true;
-            } else {
-                userDAO.deleteUser(user.getUserId());
-                throw new RuntimeException("Failed to create customer record");
-            }
+            customer.setCustomerId(user.getUserId());
+            logger.info("Customer created successfully");
+            return true;
         } else {
             throw new RuntimeException("Failed to create user account");
         }
@@ -93,9 +93,7 @@ public class CustomerManagementController {
 
         boolean userUpdated = userDAO.updateUser(user);
 
-        boolean customerUpdated = customerDAO.updateCustomer(customer);
-
-        return userUpdated && customerUpdated;
+        return userUpdated;
     }
 
     public boolean deleteCustomer(int customerId) {
@@ -106,13 +104,9 @@ public class CustomerManagementController {
             throw new IllegalArgumentException("Customer not found");
         }
 
-        boolean customerDeleted = customerDAO.deleteCustomer(customerId);
+        boolean deleted = userDAO.deleteUser(customer.getUserId());
 
-        if (customerDeleted) {
-            userDAO.deleteUser(customer.getUserId());
-        }
-
-        return customerDeleted;
+        return deleted;
     }
 
     public Customer getCustomerByUserId(int userId) {

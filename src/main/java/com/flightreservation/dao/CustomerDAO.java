@@ -19,10 +19,8 @@ public class CustomerDAO {
     private static final Logger logger = LoggerFactory.getLogger(CustomerDAO.class);
 
     public Customer getCustomerByUserId(int userId) {
-        String sql = "SELECT c.customer_id, c.frequent_flyer_number, c.loyalty_points, c.preferred_airline, c.address, "
-                +
-                "u.username, u.email, u.phone_number, u.role, u.account_status " +
-                "FROM customers c JOIN users u ON c.customer_id = u.user_id WHERE c.customer_id = ?";
+        String sql = "SELECT user_id, username, email, phone_number, role, account_status " +
+                "FROM users WHERE user_id = ? AND role = 'CUSTOMER'";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -40,10 +38,8 @@ public class CustomerDAO {
     }
 
     public Customer getCustomerById(int customerId) {
-        String sql = "SELECT c.customer_id, c.frequent_flyer_number, c.loyalty_points, c.preferred_airline, c.address, "
-                +
-                "u.username, u.email, u.phone_number, u.role, u.account_status " +
-                "FROM customers c JOIN users u ON c.customer_id = u.user_id WHERE c.customer_id = ?";
+        String sql = "SELECT user_id, username, email, phone_number, role, account_status " +
+                "FROM users WHERE user_id = ? AND role = 'CUSTOMER'";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -62,10 +58,8 @@ public class CustomerDAO {
 
     public List<Customer> getAllCustomers() {
         List<Customer> customers = new ArrayList<>();
-        String sql = "SELECT c.customer_id, c.frequent_flyer_number, c.loyalty_points, c.preferred_airline, c.address, "
-                +
-                "u.username, u.email, u.phone_number, u.role, u.account_status " +
-                "FROM customers c JOIN users u ON c.customer_id = u.user_id";
+        String sql = "SELECT user_id, username, email, phone_number, role, account_status " +
+                "FROM users WHERE role = 'CUSTOMER'";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
                 Statement stmt = conn.createStatement();
@@ -83,11 +77,9 @@ public class CustomerDAO {
 
     public List<Customer> searchCustomers(String keyword) {
         List<Customer> customers = new ArrayList<>();
-        String sql = "SELECT c.customer_id, c.frequent_flyer_number, c.loyalty_points, c.preferred_airline, c.address, "
-                +
-                "u.username, u.email, u.phone_number, u.role, u.account_status " +
-                "FROM customers c JOIN users u ON c.customer_id = u.user_id " +
-                "WHERE u.username LIKE ? OR u.email LIKE ? OR u.phone_number LIKE ?";
+        String sql = "SELECT user_id, username, email, phone_number, role, account_status " +
+                "FROM users WHERE role = 'CUSTOMER' " +
+                "AND (username LIKE ? OR email LIKE ? OR phone_number LIKE ?)";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -180,32 +172,19 @@ public class CustomerDAO {
 
     private Customer mapResultSetToCustomer(ResultSet rs) throws SQLException {
         Customer customer = new Customer();
-        customer.setCustomerId(rs.getInt("customer_id"));
+        int userId = rs.getInt("user_id");
+        customer.setCustomerId(userId);
+        customer.setUserId(userId);
 
-        customer.setUserId(rs.getInt("customer_id"));
+        User user = new User();
+        user.setUserId(userId);
+        user.setUsername(rs.getString("username"));
+        user.setEmail(rs.getString("email"));
+        user.setPhoneNumber(rs.getString("phone_number"));
+        user.setRole(User.UserRole.valueOf(rs.getString("role")));
+        user.setAccountStatus(User.AccountStatus.valueOf(rs.getString("account_status")));
 
-        customer.setAddress(rs.getString("address"));
-        customer.setFrequentFlyerNumber(rs.getString("frequent_flyer_number"));
-        customer.setLoyaltyPoints(rs.getInt("loyalty_points"));
-        customer.setPreferredAirline(rs.getString("preferred_airline"));
-
-        try {
-            User user = new User();
-            user.setUserId(rs.getInt("customer_id"));
-            user.setUsername(rs.getString("username"));
-            user.setEmail(rs.getString("email"));
-            user.setPhoneNumber(rs.getString("phone_number"));
-
-            try {
-                user.setRole(User.UserRole.valueOf(rs.getString("role")));
-                user.setAccountStatus(
-                        User.AccountStatus.valueOf(rs.getString("account_status")));
-            } catch (SQLException e) {
-            }
-
-            customer.setUser(user);
-        } catch (SQLException e) {
-        }
+        customer.setUser(user);
 
         return customer;
     }

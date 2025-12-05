@@ -9,8 +9,8 @@ import javax.swing.JTable;
 import javax.swing.JTextField;
 
 import com.flightreservation.dao.AircraftDAO;
-import com.flightreservation.ui.panels.common.BaseManagementPanel;
 import com.flightreservation.model.entities.Aircraft;
+import com.flightreservation.ui.panels.common.BaseManagementPanel;
 import com.flightreservation.ui.util.TableFactory;
 
 public class AircraftManagementPanel extends BaseManagementPanel<Aircraft> {
@@ -18,6 +18,7 @@ public class AircraftManagementPanel extends BaseManagementPanel<Aircraft> {
 
     public AircraftManagementPanel() {
         this.aircraftDAO = new AircraftDAO();
+        loadData();
     }
 
     @Override

@@ -107,7 +107,7 @@ public class FlightDAO {
 
     public boolean createFlight(Flight flight) {
         String sql = "INSERT INTO flights (flight_number, departure_time, arrival_time, duration, " +
-                "flight_status, base_price, available_seats, aircraft_id, route_id, airline_id) " +
+                "status, base_price, available_seats, aircraft_id, route_id, airline_id) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
@@ -141,7 +141,7 @@ public class FlightDAO {
 
     public boolean updateFlight(Flight flight) {
         String sql = "UPDATE flights SET flight_number = ?, departure_time = ?, arrival_time = ?, " +
-                "duration = ?, flight_status = ?, base_price = ?, available_seats = ?, " +
+                "duration = ?, status = ?, base_price = ?, available_seats = ?, " +
                 "aircraft_id = ?, route_id = ?, airline_id = ? WHERE flight_id = ?";
 
         try (Connection conn = DatabaseManager.getInstance().getConnection();
